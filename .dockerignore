@@ -10,3 +10,4 @@ test
 *.md
 Dockerfile
 docker-compose.yml
+deploy

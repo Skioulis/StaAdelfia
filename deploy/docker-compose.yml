@@ -1,0 +1,20 @@
+# Production: runs the published image from Docker Hub. No source code needed on the server.
+# Put this file, .env and a data/ folder in one directory (e.g. /srv/gyros-menu). See DEPLOY.md.
+services:
+  gyros-menu:
+    image: ${GYROS_IMAGE:-skioulis/gyros-menu:latest}
+    restart: unless-stopped
+    init: true                      # reaps zombie processes; signals still reach node
+    stop_grace_period: 15s          # the app shuts down cleanly within 10 s
+    env_file: .env
+    environment:
+      # Fixed inside the container, whatever .env says.
+      NODE_ENV: production
+      DATA_DIR: /data
+      HOST: 0.0.0.0
+      PORT: "8080"
+    volumes:
+      # menu.db and uploads/ (the photos) live here. Must be writable by uid 1000.
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8085:8080"       # only nginx on this server can reach it

@@ -14,6 +14,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 # ---- Runtime stage ----------------------------------------------------------
 FROM node:26-slim
+LABEL org.opencontainers.image.title="gyros-menu" \
+      org.opencontainers.image.description="Gyros Sta Adelfia: phone-first restaurant menu (DE/EN/EL) with admin page" \
+      org.opencontainers.image.source="https://github.com/Skioulis/StaAdelfia" \
+      org.opencontainers.image.licenses="UNLICENSED"
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     HOST=0.0.0.0 \

@@ -7,6 +7,12 @@ A small menu site with two pages:
 
 Node.js 26 + Fastify 5 + SQLite (better-sqlite3). Plain HTML/CSS/JS, no build step. The full spec is in `CLAUDE.md`.
 
+## Deploying from Docker Hub
+
+The image is published as **`skioulis/gyros-menu`** on Docker Hub (tags `latest` and `1.0.0`).
+To deploy without the source code, follow **[DEPLOY.md](DEPLOY.md)**: it needs only the files in
+`deploy/`. The sections below build the image from source instead.
+
 ## Run it with Docker (production)
 
 You need Docker with the Compose plugin.
