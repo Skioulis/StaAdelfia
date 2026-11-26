@@ -1,4 +1,4 @@
-import { LANGS, initialLang, saveLang, tr, money, ui, esc } from './i18n.js';
+import { LANGS, ALLERGENS, ALLERGEN_CODES, initialLang, saveLang, tr, money, ui, esc } from './i18n.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -57,13 +57,33 @@ function renderHeader() {
   ).join('');
 }
 
+/* ---------- allergens (A–R) ---------- */
+const allergenName = (code) => ALLERGENS[code]?.[lang] || ALLERGENS[code]?.de || code;
+
+/** Small letter codes after the dish name, e.g. "A C G"; screen readers get the names. */
+function allergenTag(it) {
+  if (!it.allergens?.length) return '';
+  const names = it.allergens.map(allergenName).join(', ');
+  return ` <span class="alg" title="${esc(names)}"><span aria-hidden="true">${it.allergens.join(' ')}</span><span class="sr-only">${esc(ui('allergens', lang))}: ${esc(names)}</span></span>`;
+}
+
+/** Legend with all codes, shown at the end of the menu when any dish declares allergens. */
+function allergenLegend(groups) {
+  if (!groups.some((g) => g.items.some((i) => i.allergens?.length))) return '';
+  return `<section class="alg-legend" aria-labelledby="alg-title">
+      <h2 id="alg-title">${esc(ui('allergenInfo', lang))}</h2>
+      <dl>${ALLERGEN_CODES.map((c) => `<div><dt>${c}</dt><dd>${esc(allergenName(c))}</dd></div>`).join('')}</dl>
+      <p>${esc(ui('allergenNote', lang))}</p>
+    </section>`;
+}
+
 function itemCard(it) {
   const name = tr(it.name, lang);
   const desc = tr(it.description, lang);
   return `
     <button type="button" class="item ${it.imageUrl ? '' : 'no-img'} ${it.isAvailable ? '' : 'unavailable'}" data-item="${it.id}">
       <div>
-        <h3>${esc(name)}</h3>
+        <h3>${esc(name)}${allergenTag(it)}</h3>
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ''}
         <div class="bottom">
           <span class="price">${money(it.priceCents, lang)}</span>
@@ -95,7 +115,7 @@ function render() {
     <section class="group" id="g-${g.id}">
       <h2>${esc(tr(g.name, lang))}</h2>
       <div class="items">${g.items.map(itemCard).join('')}</div>
-    </section>`).join('') : `<p class="empty">${esc(ui('empty', lang))}</p>`;
+    </section>`).join('') + allergenLegend(groups) : `<p class="empty">${esc(ui('empty', lang))}</p>`;
 
   setupScrollSpy();
 }
@@ -114,6 +134,8 @@ function showItem(id) {
         <ul class="opts">${it.options.map((o) => `<li><span>${esc(tr(o.name, lang))}</span><span>${
           o.extraPriceCents > 0 ? '+ ' + money(o.extraPriceCents, lang) : esc(ui('included', lang))
         }</span></li>`).join('')}</ul>` : ''}
+      ${it.allergens?.length ? `<p class="label-sm">${esc(ui('allergens', lang))}</p>
+        <ul class="alg-list">${it.allergens.map((c) => `<li><b>${c}</b> ${esc(allergenName(c))}</li>`).join('')}</ul>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span class="price" style="font-size:24px">${money(it.priceCents, lang)}</span>
         ${!it.isAvailable ? `<span class="badge-off">${esc(ui('unavailable', lang))}</span>` : ''}

@@ -58,6 +58,7 @@ test('GET /api/menu applies ordering and visibility rules', async (t) => {
     priceCents: 1390,
     imageUrl: '/uploads/abc.jpg',
     isAvailable: true,
+    allergens: [],
     options: [
       { name: { de: 'Doppeltes Patty', en: null, el: null }, extraPriceCents: 450 },
       { name: { de: 'Mit Speck', en: null, el: null }, extraPriceCents: 150 },
@@ -122,4 +123,21 @@ test('serves the admin page; /admin redirects to /admin/', async (t) => {
   assert.equal((await app.inject({ method: 'GET', url: '/js/admin.js' })).statusCode, 200);
   assert.equal((await app.inject({ method: 'GET', url: '/js/admin-i18n.js' })).statusCode, 200);
   assert.match(page.body, /data-langs/, 'language switcher (DE/EN/EL)');
+});
+
+test('allergen codes: browser list matches the server, sample menu declares some', async (t) => {
+  const { ALLERGEN_CODES } = await import('../src/lib/allergens.js');
+  const { ALLERGENS, ALLERGEN_CODES: clientCodes } = await import('../public/js/i18n.js');
+  assert.deepEqual(clientCodes, ALLERGEN_CODES);
+  assert.equal(ALLERGEN_CODES.length, 14);
+  for (const c of ALLERGEN_CODES) {
+    assert.ok(ALLERGENS[c].de && ALLERGENS[c].en && ALLERGENS[c].el, `names for ${c}`);
+  }
+
+  const { app, db } = buildTestApp();
+  t.after(() => app.close());
+  seedSampleData(db);
+  const { groups } = (await app.inject({ method: 'GET', url: '/api/menu' })).json();
+  const burger = groups[1].items.find((i) => i.name.en === 'Classic beef burger');
+  assert.deepEqual(burger.allergens, ['A', 'C', 'G', 'M', 'N']);
 });

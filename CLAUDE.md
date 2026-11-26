@@ -159,6 +159,9 @@ CREATE TABLE session (
 );
 ```
 
+Later migrations:
+- `002_allergens.sql`: `menu_item.allergens TEXT NOT NULL DEFAULT ''`, the item's allergen letter codes in A–R order, e.g. `'ACG'` (see section 7a).
+
 Rules:
 - **Pragmas** on open: `journal_mode = WAL`, `foreign_keys = ON` (required for the cascades), `busy_timeout = 5000`.
 - **Migrations:** numbered `.sql` files, applied in order at startup inside a transaction, tracked with `PRAGMA user_version`. Never edit an applied file; add a new one.
@@ -175,7 +178,7 @@ All JSON. The public endpoints need no auth; `/api/admin/*` requires the admin c
 ### Public
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/api/menu` | `{ settings, groups:[{ id, name:{de,en,el}, items:[{ id, name, description, priceCents, imageUrl, isAvailable, options:[{ name, extraPriceCents }] }] }] }`. Only visible groups that have at least one item, in sort order. Unavailable items are included (shown greyed out). Send `Cache-Control: public, max-age=60`. |
+| GET | `/api/menu` | `{ settings, groups:[{ id, name:{de,en,el}, items:[{ id, name, description, priceCents, imageUrl, isAvailable, allergens:['A','C'], options:[{ name, extraPriceCents }] }] }] }`. Only visible groups that have at least one item, in sort order. Unavailable items are included (shown greyed out). Send `Cache-Control: public, max-age=60`. |
 
 ### Auth
 | Method | Path | Notes |
@@ -199,6 +202,17 @@ All JSON. The public endpoints need no auth; `/api/admin/*` requires the admin c
 | POST | `/api/admin/items/:id/image` | `multipart/form-data`, field `file` → `{ imageUrl }`. Replaces and deletes the old file. |
 | DELETE | `/api/admin/items/:id/image` | |
 | GET/PUT | `/api/admin/settings` | Restaurant name and tagline |
+
+### 7a. Allergens
+
+The 14 EU allergens (Regulation 1169/2011) with the letter codes used on Austrian menus:
+A gluten, B crustaceans, C eggs, D fish, E peanuts, F soy, G milk/lactose, H tree nuts, L celery,
+M mustard, N sesame, O sulphites, P lupin, R molluscs.
+
+- Codes: `src/lib/allergens.js` (server, validation); names in DE/EN/EL: `ALLERGENS` in `public/js/i18n.js`. A test checks both lists match.
+- API: items carry `allergens: ['A','G']`. On create it is optional (default `[]`); on `PUT` it is required like every other field. Unknown codes, lower case and duplicates are rejected (400).
+- Menu: the letters appear small after the dish name, the item sheet lists them by name, and a legend with all codes is shown at the end of the menu (only when at least one dish declares allergens).
+- Admin: 14 checkboxes in the item form (letter + name in the admin language); list rows show the letters.
 
 Fastify returns 400 with a message when a request fails its JSON Schema. Add a custom error handler that returns `{ errors: { "name.de": "…" } }` keyed by field, so the admin JS can show each message next to its field. Return 404 for unknown ids.
 
@@ -322,7 +336,7 @@ For local development, `npm run dev` uses `node --watch --env-file=.env src/serv
 
 ## 14. Open questions for the owner
 
-- **Allergens:** Austrian menus usually show allergen letter codes (A–R). If wanted, add a multi-select of allergen codes per item and a legend on the menu (v1.1, or v1 if required).
+- ~~**Allergens:**~~ done: codes A–R per item, legend on the menu (section 7a). The owner still has to enter the right codes per dish; the sample menu's codes are only examples.
 - ~~**Admin language:**~~ decided: the admin page has a DE/EN/EL switcher.
 - **Public domain/URL**, for the QR code and HTTPS.
 - **Extra info on the menu page:** address, opening hours, phone? These could go in `SiteSettings`.

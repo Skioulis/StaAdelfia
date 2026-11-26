@@ -1,5 +1,7 @@
 // Shared JSON Schemas.
 
+import { ALLERGEN_CODES } from './allergens.js';
+
 const nullableString = { type: ['string', 'null'] };
 
 // Response shape for translated text. Only `de` is required in stored data,
@@ -34,6 +36,7 @@ export const publicItemOut = {
     priceCents: { type: 'integer' },
     imageUrl: nullableString,
     isAvailable: { type: 'boolean' },
+    allergens: { type: 'array', items: { type: 'string' } },
     options: { type: 'array', items: optionOut },
   },
 };
@@ -158,6 +161,10 @@ export const itemIn = {
     description: localizedTextIn(DESC_MAX),
     priceCents: price,
     isAvailable: { type: 'boolean', default: true },
+    allergens: {
+      type: 'array', uniqueItems: true, maxItems: ALLERGEN_CODES.length,
+      items: { type: 'string', enum: ALLERGEN_CODES }, default: [],
+    },
     options: { type: 'array', maxItems: OPTIONS_MAX, items: optionIn, default: [] },
   },
 };
@@ -198,5 +205,5 @@ function forReplace(schema) {
 export const groupReplaceIn = forReplace(groupIn);
 export const itemReplaceIn = {
   ...forReplace(itemIn),
-  required: ['groupId', 'name', 'description', 'priceCents', 'isAvailable', 'options'],
+  required: ['groupId', 'name', 'description', 'priceCents', 'isAvailable', 'allergens', 'options'],
 };

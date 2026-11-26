@@ -17,6 +17,8 @@ function message(e) {
     case 'minimum': return `Must be at least ${p.limit}`;
     case 'maximum': return `Must be at most ${p.limit}`;
     case 'maxItems': return `At most ${p.limit} entries`;
+    case 'enum': return 'Invalid value';
+    case 'uniqueItems': return 'Duplicate entries';
     case 'type': return `Must be ${[p.type].flat().filter((t) => t !== 'null').join(' or ')}`;
     default: return e.message || 'Invalid value';
   }

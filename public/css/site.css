@@ -157,3 +157,26 @@ button{cursor:pointer}
 /* Reorder arrows: a bit larger so they are easy to see and hit. */
 .row .acts .btn.icon.ghost{font-size:18px;color:var(--accent)}
 .row .acts .btn.icon.ghost:disabled{color:var(--line);opacity:1}
+
+/* Allergens (A–R): letters after the dish name, list in the item sheet, legend at the end of the menu. */
+.alg{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);white-space:nowrap;margin-left:2px;vertical-align:2px}
+.alg-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.alg-list li{font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.alg-list b{color:var(--accent);margin-right:2px}
+.alg-legend{margin-top:36px;padding:16px;border-top:1px dashed var(--line)}
+.alg-legend h2{font-family:var(--serif);font-weight:600;font-size:18px;margin:0 0 10px}
+.alg-legend dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 16px;margin:0 0 12px;font-size:13px}
+.alg-legend dl div{display:flex;gap:8px}
+.alg-legend dt{font-weight:700;color:var(--accent);min-width:1em}
+.alg-legend dd{margin:0;color:var(--muted)}
+.alg-legend p{margin:0;font-size:12px;color:var(--muted)}
+
+/* Admin: allergen checkboxes in the item form. */
+.alg-field{border:0;padding:0;margin:0;min-width:0}
+.alg-field legend{padding:0}
+.alg-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.alg-checks.invalid{outline:2px solid var(--danger);outline-offset:3px;border-radius:10px}
+.alg-checks .alg-check{margin:0;font-weight:400;display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:14px;line-height:1.2;cursor:pointer}
+.alg-check input{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+.alg-check b{color:var(--accent);min-width:1em}
+.alg-check:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}

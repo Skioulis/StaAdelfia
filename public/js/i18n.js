@@ -13,10 +13,32 @@ const STORAGE_KEY = 'menu-lang';
 
 /** UI text on the public menu, per language. */
 export const UI = {
-  de: { eyebrow: 'Speisekarte', options: 'Auswahl', choose: 'Mit Auswahl', unavailable: 'Heute nicht verfügbar', empty: 'Die Speisekarte wird gerade vorbereitet.', included: 'inklusive', error: 'Die Speisekarte konnte nicht geladen werden. Bitte später erneut versuchen.', retry: 'Erneut versuchen', close: 'Schließen', language: 'Sprache' },
-  en: { eyebrow: 'Menu', options: 'Options', choose: 'Options available', unavailable: 'Not available today', empty: 'The menu is being prepared.', included: 'included', error: 'The menu could not be loaded. Please try again later.', retry: 'Try again', close: 'Close', language: 'Language' },
-  el: { eyebrow: 'Μενού', options: 'Επιλογές', choose: 'Με επιλογές', unavailable: 'Μη διαθέσιμο σήμερα', empty: 'Το μενού ετοιμάζεται.', included: 'περιλαμβάνεται', error: 'Δεν ήταν δυνατή η φόρτωση του μενού. Δοκιμάστε ξανά αργότερα.', retry: 'Δοκιμάστε ξανά', close: 'Κλείσιμο', language: 'Γλώσσα' },
+  de: { eyebrow: 'Speisekarte', options: 'Auswahl', choose: 'Mit Auswahl', unavailable: 'Heute nicht verfügbar', empty: 'Die Speisekarte wird gerade vorbereitet.', included: 'inklusive', error: 'Die Speisekarte konnte nicht geladen werden. Bitte später erneut versuchen.', retry: 'Erneut versuchen', close: 'Schließen', language: 'Sprache', allergens: 'Allergene', allergenInfo: 'Allergeninformation', allergenNote: 'Kennzeichnung nach EU-Verordnung 1169/2011. Bei Fragen hilft Ihnen unser Personal gerne weiter.' },
+  en: { eyebrow: 'Menu', options: 'Options', choose: 'Options available', unavailable: 'Not available today', empty: 'The menu is being prepared.', included: 'included', error: 'The menu could not be loaded. Please try again later.', retry: 'Try again', close: 'Close', language: 'Language', allergens: 'Allergens', allergenInfo: 'Allergen information', allergenNote: 'Labelled according to EU Regulation 1169/2011. Please ask our staff if you have any questions.' },
+  el: { eyebrow: 'Μενού', options: 'Επιλογές', choose: 'Με επιλογές', unavailable: 'Μη διαθέσιμο σήμερα', empty: 'Το μενού ετοιμάζεται.', included: 'περιλαμβάνεται', error: 'Δεν ήταν δυνατή η φόρτωση του μενού. Δοκιμάστε ξανά αργότερα.', retry: 'Δοκιμάστε ξανά', close: 'Κλείσιμο', language: 'Γλώσσα', allergens: 'Αλλεργιογόνα', allergenInfo: 'Πληροφορίες για αλλεργιογόνα', allergenNote: 'Σήμανση σύμφωνα με τον Κανονισμό (ΕΕ) 1169/2011. Για ερωτήσεις απευθυνθείτε στο προσωπικό μας.' },
 };
+
+/**
+ * The 14 EU allergens with the letter codes used on Austrian menus (A–R).
+ * Must match ALLERGEN_CODES in src/lib/allergens.js (a test checks this).
+ */
+export const ALLERGENS = {
+  A: { de: 'Glutenhaltiges Getreide', en: 'Cereals containing gluten', el: 'Δημητριακά με γλουτένη' },
+  B: { de: 'Krebstiere', en: 'Crustaceans', el: 'Καρκινοειδή' },
+  C: { de: 'Eier', en: 'Eggs', el: 'Αυγά' },
+  D: { de: 'Fisch', en: 'Fish', el: 'Ψάρια' },
+  E: { de: 'Erdnüsse', en: 'Peanuts', el: 'Αράπικα φιστίκια' },
+  F: { de: 'Soja', en: 'Soy', el: 'Σόγια' },
+  G: { de: 'Milch und Laktose', en: 'Milk and lactose', el: 'Γάλα και λακτόζη' },
+  H: { de: 'Schalenfrüchte', en: 'Tree nuts', el: 'Ξηροί καρποί' },
+  L: { de: 'Sellerie', en: 'Celery', el: 'Σέλινο' },
+  M: { de: 'Senf', en: 'Mustard', el: 'Μουστάρδα' },
+  N: { de: 'Sesam', en: 'Sesame', el: 'Σουσάμι' },
+  O: { de: 'Sulfite', en: 'Sulphites', el: 'Θειώδη' },
+  P: { de: 'Lupinen', en: 'Lupin', el: 'Λούπινο' },
+  R: { de: 'Weichtiere', en: 'Molluscs', el: 'Μαλάκια' },
+};
+export const ALLERGEN_CODES = Object.keys(ALLERGENS);
 
 const isLang = (code) => LANGS.some((l) => l.code === code);
 

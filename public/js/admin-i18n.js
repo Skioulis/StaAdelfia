@@ -97,6 +97,9 @@ const T = {
     listChanged: 'Die Liste wurde inzwischen geändert. Bitte die Seite neu laden.',
     imageType: 'Nur JPEG-, PNG- oder WebP-Bilder',
     imageTooBig: 'Höchstens {n} MB',
+    allergens: 'Allergene',
+    allergensHint: '– erscheinen als Buchstaben A–R auf der Speisekarte',
+    duplicateEntries: 'Doppelte Einträge',
     notFound: 'Dieser Eintrag existiert nicht mehr. Bitte die Seite neu laden.',
   },
 
@@ -191,6 +194,9 @@ const T = {
     listChanged: 'The list was changed in the meantime. Please reload the page.',
     imageType: 'Only JPEG, PNG or WebP images',
     imageTooBig: 'At most {n} MB',
+    allergens: 'Allergens',
+    allergensHint: '— shown as letters A–R on the menu',
+    duplicateEntries: 'Duplicate entries',
     notFound: 'This entry no longer exists. Please reload the page.',
   },
 
@@ -285,6 +291,9 @@ const T = {
     listChanged: 'Η λίστα άλλαξε στο μεταξύ. Ανανεώστε τη σελίδα.',
     imageType: 'Μόνο εικόνες JPEG, PNG ή WebP',
     imageTooBig: 'Έως {n} MB',
+    allergens: 'Αλλεργιογόνα',
+    allergensHint: '— εμφανίζονται ως γράμματα A–R στο μενού',
+    duplicateEntries: 'Διπλές καταχωρίσεις',
     notFound: 'Η καταχώριση δεν υπάρχει πλέον. Ανανεώστε τη σελίδα.',
   },
 };
@@ -349,7 +358,8 @@ export function serverMessage(msg, key = '', formatCents = (c) => String(c)) {
   if ((r = m.match(/^Must be at least (\d+)$/))) return t('minValue', { n: r[1] });
   if ((r = m.match(/^At most (\d+) entries$/))) return t('maxEntries', { n: r[1] });
   if ((r = m.match(/^At most (\d+) MB$/))) return t('imageTooBig', { n: r[1] });
-  if (/^Must be (integer|number|boolean|string|object|array)/.test(m)) return t('invalidValue');
+  if (/^Must be (integer|number|boolean|string|object|array)/.test(m) || m === 'Invalid value') return t('invalidValue');
+  if (m === 'Duplicate entries') return t('duplicateEntries');
   if (m === 'Unknown group') return t('unknownGroup');
   if (m === 'Must list every id exactly once') return t('listChanged');
   if (m === 'Must be a JPEG, PNG or WebP image') return t('imageType');

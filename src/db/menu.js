@@ -1,5 +1,7 @@
 // Queries for the public menu. Maps columns to the API shape ({ name: { de, en, el } }).
 
+import { fromAllergenString } from '../lib/allergens.js';
+
 export const loc = (row, prefix) => ({
   de: row[`${prefix}_de`] ?? null,
   en: row[`${prefix}_en`] ?? null,
@@ -53,6 +55,7 @@ export function getPublicMenu(db) {
       priceCents: i.price_cents,
       imageUrl: imageUrl(i.image_file),
       isAvailable: i.is_available === 1,
+      allergens: fromAllergenString(i.allergens),
       options: optionsByItem.get(i.id) ?? [],
     });
   }

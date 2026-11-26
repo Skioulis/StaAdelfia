@@ -3,6 +3,7 @@
 
 import { loc, imageUrl, getSettings } from './menu.js';
 import { FieldError } from '../lib/errors.js';
+import { fromAllergenString, toAllergenString } from '../lib/allergens.js';
 
 /* ---------- mapping ---------- */
 
@@ -24,6 +25,7 @@ const toItem = (i, options) => ({
   priceCents: i.price_cents,
   imageUrl: imageUrl(i.image_file),
   isAvailable: i.is_available === 1,
+  allergens: fromAllergenString(i.allergens),
   options,
 });
 
@@ -146,12 +148,13 @@ export function createItem(db, data) {
     const d = data.description ?? {};
     const { lastInsertRowid: id } = db.prepare(`
       INSERT INTO menu_item (group_id, name_de, name_en, name_el, desc_de, desc_en, desc_el,
-                             price_cents, is_available, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                             price_cents, is_available, allergens, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       data.groupId, req(data.name.de), opt(data.name.en), opt(data.name.el),
       req(d.de), opt(d.en), opt(d.el),
-      data.priceCents, bool(data.isAvailable ?? true), nextItemSort(db, data.groupId),
+      data.priceCents, bool(data.isAvailable ?? true), toAllergenString(data.allergens),
+      nextItemSort(db, data.groupId),
     );
     replaceOptions(db, id, data.options ?? []);
     return getItem(db, id);
@@ -169,13 +172,13 @@ export function updateItem(db, id, data) {
     const d = data.description ?? {};
     db.prepare(`
       UPDATE menu_item SET group_id = ?, name_de = ?, name_en = ?, name_el = ?,
-        desc_de = ?, desc_en = ?, desc_el = ?, price_cents = ?, is_available = ?, sort_order = ?,
-        updated_at = datetime('now')
+        desc_de = ?, desc_en = ?, desc_el = ?, price_cents = ?, is_available = ?, allergens = ?,
+        sort_order = ?, updated_at = datetime('now')
       WHERE id = ?`
     ).run(
       data.groupId, req(data.name.de), opt(data.name.en), opt(data.name.el),
       req(d.de), opt(d.en), opt(d.el),
-      data.priceCents, bool(data.isAvailable ?? true), sort, id,
+      data.priceCents, bool(data.isAvailable ?? true), toAllergenString(data.allergens), sort, id,
     );
     replaceOptions(db, id, data.options ?? []);
     return getItem(db, id);

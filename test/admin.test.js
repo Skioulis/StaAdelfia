@@ -264,7 +264,7 @@ describe('items', () => {
     const foreignId = other.options[0].id;
 
     const res = await call('PUT', `/api/admin/items/${it.id}`, {
-      groupId: g.id, name: name('Pommes frites'), description: {}, priceCents: 490, isAvailable: false,
+      groupId: g.id, name: name('Pommes frites'), description: {}, priceCents: 490, isAvailable: false, allergens: [],
       options: [
         { id: medium.id, name: name('Mittel', 'Medium'), extraPriceCents: 150 }, // updated, now first
         { name: name('Süßkartoffel'), extraPriceCents: 150 },                    // new
@@ -289,7 +289,7 @@ describe('items', () => {
 
     // An empty list removes them all.
     const cleared = await call('PUT', `/api/admin/items/${it.id}`, {
-      groupId: g.id, name: name('Pommes'), description: {}, priceCents: 450, isAvailable: true, options: [],
+      groupId: g.id, name: name('Pommes'), description: {}, priceCents: 450, isAvailable: true, allergens: [], options: [],
     });
     assert.deepEqual(cleared.json().options, []);
     assert.equal(cleared.json().isAvailable, true);
@@ -297,7 +297,9 @@ describe('items', () => {
     // PUT replaces the item, so leaving fields out is an error rather than a silent reset.
     const partial = await call('PUT', `/api/admin/items/${it.id}`, { groupId: g.id, name: name('Pommes'), priceCents: 450 });
     assert.equal(partial.statusCode, 400);
-    assert.deepEqual(partial.json().errors, { description: 'Required', isAvailable: 'Required', options: 'Required' });
+    assert.deepEqual(partial.json().errors, {
+      description: 'Required', isAvailable: 'Required', allergens: 'Required', options: 'Required',
+    });
   });
 
   test('a failed update changes nothing (transaction)', async (t) => {
@@ -305,7 +307,7 @@ describe('items', () => {
     const g = await createGroup(call, 'G');
     const it = await createItem(call, g.id, 'Alt', { options: [{ name: name('Opt') }] });
     const res = await call('PUT', `/api/admin/items/${it.id}`, {
-      groupId: 999, name: name('Neu'), description: {}, priceCents: 1, isAvailable: true, options: [],
+      groupId: 999, name: name('Neu'), description: {}, priceCents: 1, isAvailable: true, allergens: [], options: [],
     });
     assert.equal(res.statusCode, 400);
     assert.equal(db.prepare('SELECT name_de FROM menu_item').pluck().get(), 'Alt');
@@ -321,7 +323,7 @@ describe('items', () => {
     await createItem(call, b.id, 'B2');
 
     const res = await call('PUT', `/api/admin/items/${moving.id}`, {
-      groupId: b.id, name: name('Wandert'), description: {}, priceCents: 1000, isAvailable: true, options: [],
+      groupId: b.id, name: name('Wandert'), description: {}, priceCents: 1000, isAvailable: true, allergens: [], options: [],
     });
     assert.equal(res.statusCode, 200);
     const { groups } = await adminMenu(call);
@@ -348,7 +350,7 @@ describe('items', () => {
 
     assert.equal((await call('DELETE', `/api/admin/items/${it.id}`)).statusCode, 404);
     assert.equal((await call('PUT', `/api/admin/items/${it.id}`, {
-      groupId: g.id, name: name('X'), description: {}, priceCents: 1, isAvailable: true, options: [],
+      groupId: g.id, name: name('X'), description: {}, priceCents: 1, isAvailable: true, allergens: [], options: [],
     })).statusCode, 404);
   });
 
@@ -390,5 +392,51 @@ describe('settings', () => {
     res = await call('PUT', '/api/admin/settings', { name: '' });
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.json().errors, { name: 'Required' });
+  });
+});
+
+/* ---------- allergens ---------- */
+
+describe('allergens', () => {
+  test('create, update and clear allergen codes; stored in canonical order', async (t) => {
+    const { app, call, db } = await setup(t);
+    const g = await createGroup(call, 'Burger');
+
+    const created = await createItem(call, g.id, 'Burger', { allergens: ['N', 'A', 'G'] });
+    assert.deepEqual(created.allergens, ['A', 'G', 'N'], 'sorted A–R');
+    assert.equal(db.prepare('SELECT allergens FROM menu_item').pluck().get(), 'AGN');
+
+    const plain = await createItem(call, g.id, 'Pommes');
+    assert.deepEqual(plain.allergens, [], 'defaults to none');
+
+    const full = { groupId: g.id, name: name('Burger'), description: {}, priceCents: 1000, isAvailable: true, options: [] };
+    let res = await call('PUT', `/api/admin/items/${created.id}`, { ...full, allergens: ['R', 'C'] });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().allergens, ['C', 'R']);
+
+    res = await call('PUT', `/api/admin/items/${created.id}`, { ...full, allergens: [] });
+    assert.deepEqual(res.json().allergens, []);
+
+    // The public menu carries them too.
+    await call('PUT', `/api/admin/items/${created.id}`, { ...full, allergens: ['A', 'M'] });
+    const pub = (await app.inject({ method: 'GET', url: '/api/menu' })).json();
+    assert.deepEqual(pub.groups[0].items.map((i) => i.allergens), [['A', 'M'], []]);
+  });
+
+  test('unknown or duplicate codes are rejected', async (t) => {
+    const { call, db } = await setup(t);
+    const g = await createGroup(call, 'G');
+
+    let res = await call('POST', '/api/admin/items', { groupId: g.id, name: name('X'), priceCents: 100, allergens: ['A', 'Z'] });
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(res.json().errors, { 'allergens.1': 'Invalid value' });
+
+    res = await call('POST', '/api/admin/items', { groupId: g.id, name: name('X'), priceCents: 100, allergens: ['a'] });
+    assert.deepEqual(res.json().errors, { 'allergens.0': 'Invalid value' }, 'codes are upper case');
+
+    res = await call('POST', '/api/admin/items', { groupId: g.id, name: name('X'), priceCents: 100, allergens: ['A', 'A'] });
+    assert.deepEqual(res.json().errors, { allergens: 'Duplicate entries' });
+
+    assert.equal(count(db, 'menu_item'), 0);
   });
 });

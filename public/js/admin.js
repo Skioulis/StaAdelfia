@@ -2,7 +2,7 @@
 // The admin UI itself is available in German, English and Greek (switcher in the top bar);
 // menu content is entered in DE/EN/EL, with German required.
 
-import { LANGS, DEFAULT_LANG, money, esc } from './i18n.js';
+import { LANGS, DEFAULT_LANG, ALLERGENS, ALLERGEN_CODES, money, esc } from './i18n.js';
 import { t, tn, getLang, setLang, serverMessage } from './admin-i18n.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -75,7 +75,11 @@ async function busy(button, fn) {
 /* =========================================================
    HELPERS
    ========================================================= */
-const gName = (g) => g?.name[DE] || t('noName');
+/** Which language a name is shown in: the admin language, or German when that translation is empty. */
+const nameLang = (name) => (name?.[getLang()] ? getLang() : DE);
+/** A group's or item's name in the admin language, falling back to German. */
+const nameOf = (obj) => obj?.name?.[nameLang(obj?.name)] || t('noName');
+const gName = nameOf;
 const allItems = () => MENU.groups.flatMap((g) => g.items);
 const findItem = (id) => allItems().find((i) => i.id === id);
 const findGroup = (id) => MENU.groups.find((g) => g.id === id);
@@ -239,11 +243,12 @@ async function uploadImage(itemId, blob) {
    ========================================================= */
 function itemRow(it, { first, last }) {
   const g = findGroup(it.groupId);
-  const opts = it.options.length ? ` · ${tn('nOptions', it.options.length)}` : '';
+  const opts = (it.options.length ? ` · ${tn('nOptions', it.options.length)}` : '')
+    + (it.allergens?.length ? ` · ${it.allergens.join(' ')}` : '');
   return `<div class="row">
     ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="" loading="lazy">` : '<div class="ph"></div>'}
     <div class="info">
-      <strong lang="${DE}">${esc(it.name[DE] || t('noName'))}${it.isAvailable ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('notAvailable'))}</span>`}</strong>
+      <strong lang="${nameLang(it.name)}">${esc(nameOf(it))}${it.isAvailable ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('notAvailable'))}</span>`}</strong>
       <small>${esc(gName(g))} · ${euro(it.priceCents)}${opts}</small>
     </div>
     <div class="acts">
@@ -273,8 +278,8 @@ function renderAdmin() {
   // groups
   $('#group-list').innerHTML = MENU.groups.length ? MENU.groups.map((g, i) => `<div class="row">
       <div class="info">
-        <strong lang="${DE}">${esc(gName(g))}${g.isVisible ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('hidden'))}</span>`}</strong>
-        <small>${LANGS.slice(1).map((l) => esc(g.name[l.code] || '—')).join(' · ')} · ${tn('nItems', g.items.length)}</small>
+        <strong lang="${nameLang(g.name)}">${esc(gName(g))}${g.isVisible ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('hidden'))}</span>`}</strong>
+        <small>${LANGS.filter((l) => l.code !== nameLang(g.name)).map((l) => esc(g.name[l.code] || '—')).join(' · ')} · ${tn('nItems', g.items.length)}</small>
       </div>
       <div class="acts">
         <button type="button" class="btn icon ghost" data-act="group-up" data-id="${g.id}" aria-label="${esc(t('moveUp'))}" ${i === 0 ? 'disabled' : ''}>↑</button>
@@ -390,7 +395,7 @@ function editItem(id) {
   if (id && !existing) return;
   const it = existing ? structuredClone(existing) : {
     groupId: filterGroup !== 'all' ? filterGroup : MENU.groups[0].id,
-    name: {}, description: {}, priceCents: null, imageUrl: null, options: [], isAvailable: true,
+    name: {}, description: {}, priceCents: null, imageUrl: null, options: [], allergens: [], isAvailable: true,
   };
   let pendingImage = null; // new item: image is uploaded after the first save
 
@@ -406,6 +411,10 @@ function editItem(id) {
           <input class="inp" id="f-price" type="number" inputmode="decimal" step="0.01" min="0" max="1000" name="price" value="${centsToInput(it.priceCents)}" required></div>
         <div class="field" style="align-self:end"><label class="switch"><input type="checkbox" name="available" ${it.isAvailable ? 'checked' : ''}> ${esc(t('available'))}</label></div>
       </div>
+      <fieldset class="field alg-field" data-allergens>
+        <legend class="fieldset-label">${esc(t('allergens'))} <span style="font-weight:400;color:var(--muted)">${esc(t('allergensHint'))}</span></legend>
+        <div class="alg-checks">${ALLERGEN_CODES.map((c) => `<label class="alg-check"><input type="checkbox" name="allergen" value="${c}" ${it.allergens?.includes(c) ? 'checked' : ''}><b>${c}</b><span>${esc(ALLERGENS[c][getLang()] || ALLERGENS[c].de)}</span></label>`).join('')}</div>
+      </fieldset>
       <div class="field"><span class="fieldset-label">${esc(t('image'))}</span>
         <div class="img-box">
           <img class="preview" alt="" ${it.imageUrl ? `src="${esc(it.imageUrl)}"` : ''}>
@@ -498,7 +507,7 @@ function editItem(id) {
     };
 
     const del = $('[data-del]', s);
-    if (del) del.onclick = () => confirmBox(t('confirmDelete', { name: it.name[DE] }), async () => {
+    if (del) del.onclick = () => confirmBox(t('confirmDelete', { name: nameOf(it) }), async () => {
       await api('DELETE', `/api/admin/items/${id}`);
       await reload();
       toast(t('itemDeleted'));
@@ -533,6 +542,7 @@ function editItem(id) {
         description: readMl(f, 'desc'),
         priceCents,
         isAvailable: f.elements.available.checked,
+        allergens: $$('[name="allergen"]:checked', f).map((el) => el.value),
         options,
       };
 
@@ -572,6 +582,7 @@ function editItem(id) {
             if (key === 'priceCents') return f.elements.price;
             if (key === 'groupId') return f.elements.groupId;
             if (key === 'options') return opts;
+            if (key.startsWith('allergens')) return $('[data-allergens] .alg-checks', f);
             return null;
           });
         }
@@ -651,6 +662,7 @@ function applyTexts() {
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-langs] [data-lang]');
   if (!b || b.dataset.lang === getLang()) return;
+  const box = b.closest('[data-langs]'); // applyTexts() re-draws the buttons, so keep the container
   setLang(b.dataset.lang);
   // Keep a ?lang= link in step with the choice, so a reload shows the same language.
   const url = new URL(location.href);
@@ -662,7 +674,7 @@ document.addEventListener('click', (e) => {
   // Re-render the lists. Field errors on the login form are dropped (they were in the old language).
   if (!$('#view-admin').classList.contains('hidden')) renderAdmin();
   else clearErrors($('#login-form'));
-  $(`[data-langs] [data-lang="${b.dataset.lang}"]`, b.closest('[data-langs]').parentElement)?.focus();
+  $(`[data-lang="${getLang()}"]`, box)?.focus();
 });
 
 applyTexts();
