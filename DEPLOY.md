@@ -5,6 +5,10 @@ or Node.js: the app is a ready-made Docker image on Docker Hub,
 **`skioulis/gyros-menu`**, and you only need the three files in the
 [`deploy/`](deploy/) folder of this repository.
 
+> **Have the source code instead?** If you cloned the repository from GitHub and want the server
+> to build the image itself, follow [docs/install-from-source.html](docs/install-from-source.html)
+> (open the file in a browser).
+
 What you end up with:
 
 - `https://<domain>/`: the public menu, opened by guests from a QR code on the table.

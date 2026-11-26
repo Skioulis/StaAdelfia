@@ -11,3 +11,4 @@ test
 Dockerfile
 docker-compose.yml
 deploy
+docs
