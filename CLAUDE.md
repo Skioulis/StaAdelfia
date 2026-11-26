@@ -45,7 +45,8 @@ Reasons:
 - **Language choice order:** `?lang=` in the URL, then the saved choice (localStorage), then the browser language, then `de`.
 - **Fallback when a translation is empty:** requested language → `de` → `en` → `el`.
 - **Fonts** (Google Fonts, both include Greek): **Literata** for headings and prices, **Commissioner** for body text. Don't use Fraunces or Instrument Sans; they have no Greek letters.
-- **UI strings** for the menu page (Options, Not available today, …) live in one JS dictionary per language, as in the prototype. The admin UI can stay in one language (German or English; ask the owner).
+- **UI strings** for the menu page (Options, Not available today, …) live in one JS dictionary per language, as in the prototype (`public/js/i18n.js`).
+- **Admin UI** is also in DE/EN/EL, with its own switcher in the top bar and on the login card (`public/js/admin-i18n.js`). Its language is saved separately from the guest menu's (`admin-lang` vs `menu-lang` in localStorage), same choice order. The API's English error messages are translated in the browser. Content is still entered in all three languages, German required, and admin lists show the German names.
 - Set `<html lang>` to the current language.
 
 ## 4. Brand
@@ -322,7 +323,7 @@ For local development, `npm run dev` uses `node --watch --env-file=.env src/serv
 ## 14. Open questions for the owner
 
 - **Allergens:** Austrian menus usually show allergen letter codes (A–R). If wanted, add a multi-select of allergen codes per item and a legend on the menu (v1.1, or v1 if required).
-- **Admin language:** should the admin page itself be in German or English?
+- ~~**Admin language:**~~ decided: the admin page has a DE/EN/EL switcher.
 - **Public domain/URL**, for the QR code and HTTPS.
 - **Extra info on the menu page:** address, opening hours, phone? These could go in `SiteSettings`.
 - **Final logo SVG:** replace `public/img/logo.svg`.

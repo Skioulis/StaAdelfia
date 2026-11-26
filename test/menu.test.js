@@ -120,4 +120,6 @@ test('serves the admin page; /admin redirects to /admin/', async (t) => {
   assert.match(page.body, /src="\/js\/admin\.js"/);
   assert.match(page.body, /noindex/);
   assert.equal((await app.inject({ method: 'GET', url: '/js/admin.js' })).statusCode, 200);
+  assert.equal((await app.inject({ method: 'GET', url: '/js/admin-i18n.js' })).statusCode, 200);
+  assert.match(page.body, /data-langs/, 'language switcher (DE/EN/EL)');
 });

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Menu admin — Gyros Sta Adelfia</title>
+<title>Speisekarten-Verwaltung — Gyros Sta Adelfia</title>
 <meta name="theme-color" content="#2e5b9d">
 <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,64 +14,67 @@
 <script type="module" src="/js/admin.js"></script>
 </head>
 <body>
+<!-- Texts marked data-i18n / data-i18n-aria are filled in by js/admin.js in the chosen language (DE/EN/EL). -->
 
 <!-- Shown while /api/auth/me is answering -->
-<div id="view-loading" class="empty">Loading…</div>
+<div id="view-loading" class="empty" data-i18n="loading">…</div>
 
 <!-- ============ LOGIN ============ -->
 <div id="view-login" class="login-wrap hidden">
   <form class="sheet form login" id="login-form" novalidate>
     <img class="login-logo" src="/img/logo.svg" alt="Gyros Sta Adelfia" width="1125" height="711">
-    <h3>Menu admin</h3>
+    <h3 data-i18n="title"></h3>
+    <div class="langs login-langs" data-langs role="group"></div>
     <div class="field">
-      <label for="l-user">Username</label>
+      <label for="l-user" data-i18n="username"></label>
       <input class="inp" id="l-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     </div>
     <div class="field">
-      <label for="l-pass">Password</label>
+      <label for="l-pass" data-i18n="password"></label>
       <input class="inp" id="l-pass" name="password" type="password" autocomplete="current-password" required>
     </div>
     <p class="form-err hidden" data-err role="alert"></p>
-    <button class="btn primary">Log in</button>
+    <button class="btn primary" data-i18n="login"></button>
   </form>
 </div>
 
 <!-- ============ DASHBOARD ============ -->
 <div id="view-admin" class="hidden">
   <div class="a-top">
-    <h1><img src="/img/logo.svg" alt=""><span class="t">Menu admin</span></h1>
-    <a href="/" target="_blank" rel="noopener">View menu →</a>
-    <button type="button" class="btn" id="logout">Log out</button>
+    <h1><img src="/img/logo.svg" alt=""><span class="t" data-i18n="title"></span></h1>
+    <div class="langs a-langs" data-langs role="group"></div>
+    <a href="/" target="_blank" rel="noopener" data-i18n="viewMenu"></a>
+    <button type="button" class="btn" id="logout" data-i18n="logout"></button>
   </div>
   <main class="a-main">
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" data-tab="items" aria-selected="true">Items</button>
-      <button type="button" role="tab" data-tab="groups" aria-selected="false">Groups</button>
-      <button type="button" role="tab" data-tab="settings" aria-selected="false">Restaurant</button>
+      <button type="button" role="tab" data-tab="items" aria-selected="true" data-i18n="tabItems"></button>
+      <button type="button" role="tab" data-tab="groups" aria-selected="false" data-i18n="tabGroups"></button>
+      <button type="button" role="tab" data-tab="settings" aria-selected="false" data-i18n="tabSettings"></button>
     </div>
 
     <section id="tab-items">
       <div class="toolbar">
-        <select class="inp" id="filter-group" aria-label="Filter by group"></select>
-        <button type="button" class="btn primary" id="add-item">+ Add item</button>
+        <select class="inp" id="filter-group" data-i18n-aria="filterGroup"></select>
+        <button type="button" class="btn primary" id="add-item" data-i18n="addItem"></button>
       </div>
       <div class="list" id="item-list"></div>
     </section>
 
     <section id="tab-groups" class="hidden">
       <div class="toolbar">
-        <div style="flex:1;color:var(--muted);font-size:14px">Groups appear on the menu in this order.</div>
-        <button type="button" class="btn primary" id="add-group">+ Add group</button>
+        <div style="flex:1;color:var(--muted);font-size:14px" data-i18n="groupsHint"></div>
+        <button type="button" class="btn primary" id="add-group" data-i18n="addGroup"></button>
       </div>
       <div class="list" id="group-list"></div>
     </section>
 
     <section id="tab-settings" class="hidden">
       <form class="form" id="settings-form" novalidate style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius)">
-        <div class="field"><label for="s-name">Restaurant name</label><input class="inp" id="s-name" name="name" required maxlength="120"></div>
-        <div class="field"><span class="fieldset-label">Tagline</span><div class="ml" data-ml="tagline"></div></div>
+        <div class="field"><label for="s-name" data-i18n="restaurantName"></label><input class="inp" id="s-name" name="name" required maxlength="120"></div>
+        <div class="field"><span class="fieldset-label" data-i18n="tagline"></span><div class="ml" data-ml="tagline"></div></div>
         <p class="form-err hidden" data-err role="alert"></p>
-        <div style="display:flex;justify-content:flex-end"><button class="btn primary">Save</button></div>
+        <div style="display:flex;justify-content:flex-end"><button class="btn primary" data-i18n="save"></button></div>
       </form>
     </section>
   </main>

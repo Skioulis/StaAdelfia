@@ -1,7 +1,9 @@
 // Admin page: login, then groups / items / options / settings, all through the API.
-// The admin UI is in English (see "Open questions" in CLAUDE.md); menu content is entered in DE/EN/EL.
+// The admin UI itself is available in German, English and Greek (switcher in the top bar);
+// menu content is entered in DE/EN/EL, with German required.
 
 import { LANGS, DEFAULT_LANG, money, esc } from './i18n.js';
+import { t, tn, getLang, setLang, serverMessage } from './admin-i18n.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -35,7 +37,7 @@ async function api(method, url, body) {
   try {
     res = await fetch(url, opts);
   } catch {
-    throw new ApiError(0, 'No connection to the server. Check the internet connection and try again.');
+    throw new ApiError(0, t('noConnection'));
   }
   let data = null;
   if (res.status !== 204) {
@@ -43,12 +45,12 @@ async function api(method, url, body) {
   }
   if (res.status === 401 && url !== '/api/auth/login') {
     closeSheet();
-    showLogin('Your session has expired. Please log in again.');
+    showLogin(t('sessionExpired'));
     throw new ApiError(401, 'Not logged in');
   }
   if (!res.ok) {
-    const msg = res.status === 429 ? 'Too many attempts. Please wait a minute and try again.'
-      : data?.error || `Request failed (${res.status})`;
+    const msg = res.status === 429 ? t('tooMany')
+      : data?.error ? serverMessage(data.error) : t('requestFailed', { status: res.status });
     throw new ApiError(res.status, msg, data?.errors);
   }
   return data;
@@ -73,12 +75,11 @@ async function busy(button, fn) {
 /* =========================================================
    HELPERS
    ========================================================= */
-const gName = (g) => g?.name[DE] || '(no name)';
+const gName = (g) => g?.name[DE] || t('noName');
 const allItems = () => MENU.groups.flatMap((g) => g.items);
 const findItem = (id) => allItems().find((i) => i.id === id);
 const findGroup = (id) => MENU.groups.find((g) => g.id === id);
-const euro = (cents) => money(cents, DE);
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const euro = (cents) => money(cents, getLang());
 
 function toast(msg, { error = false } = {}) {
   const t = document.createElement('div');
@@ -106,11 +107,11 @@ function closeSheet() {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 
 function confirmBox(text, onYes) {
-  openSheet(`<div class="form"><h3>Are you sure?</h3><p style="margin:0">${esc(text)}</p>
+  openSheet(`<div class="form"><h3>${esc(t('areYouSure'))}</h3><p style="margin:0">${esc(text)}</p>
     <p class="form-err hidden" data-err role="alert"></p>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button type="button" class="btn" data-no>Cancel</button>
-      <button type="button" class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-yes>Delete</button>
+      <button type="button" class="btn" data-no>${esc(t('cancel'))}</button>
+      <button type="button" class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-yes>${esc(t('delete'))}</button>
     </div></div>`, (s) => {
     $('[data-no]', s).onclick = closeSheet;
     const yes = $('[data-yes]', s);
@@ -160,20 +161,14 @@ function markField(el, msg) {
 /**
  * Shows server errors. `locate(key)` maps an API field ("name.de", "options.0.extraPriceCents")
  * to an input; anything it can't place goes in the form's general error box.
+ * Messages are translated; amounts in cents are shown as euros ("At most € 1.000,00").
  */
-/** The API counts money in cents; the owner types euros. "Must be at most 100000" → "At most € 1.000,00". */
-function euroMessage(key, msg) {
-  if (!/Cents$/.test(key)) return msg;
-  const m = String(msg).match(/at (most|least) (\d+)/i);
-  return m ? `${m[1] === 'most' ? 'At most' : 'At least'} ${euro(Number(m[2]))}` : msg;
-}
-
 function showFormError(scope, err, locate = () => null) {
   clearErrors(scope);
   const general = [];
   if (err.errors) {
     for (const [key, raw] of Object.entries(err.errors)) {
-      const msg = euroMessage(key, raw);
+      const msg = serverMessage(raw, key, euro);
       const el = locate(key);
       if (el) markField(el, msg);
       else general.push(`${key}: ${msg}`);
@@ -195,7 +190,7 @@ function showFormError(scope, err, locate = () => null) {
 function requireGerman(scope, key) {
   const el = $(`[name="${key}.${DE}"]`, scope);
   if (el && !el.value.trim()) {
-    markField(el, 'Required');
+    markField(el, t('required'));
     el.focus();
     return false;
   }
@@ -244,23 +239,23 @@ async function uploadImage(itemId, blob) {
    ========================================================= */
 function itemRow(it, { first, last }) {
   const g = findGroup(it.groupId);
-  const opts = it.options.length ? ` · ${plural(it.options.length, 'option')}` : '';
+  const opts = it.options.length ? ` · ${tn('nOptions', it.options.length)}` : '';
   return `<div class="row">
     ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="" loading="lazy">` : '<div class="ph"></div>'}
     <div class="info">
-      <strong>${esc(it.name[DE] || '(no name)')}${it.isAvailable ? '' : '<span class="pill off">Not available</span>'}</strong>
+      <strong lang="${DE}">${esc(it.name[DE] || t('noName'))}${it.isAvailable ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('notAvailable'))}</span>`}</strong>
       <small>${esc(gName(g))} · ${euro(it.priceCents)}${opts}</small>
     </div>
     <div class="acts">
-      <button type="button" class="btn icon ghost" data-act="item-up" data-id="${it.id}" aria-label="Move up" ${first ? 'disabled' : ''}>↑</button>
-      <button type="button" class="btn icon ghost" data-act="item-down" data-id="${it.id}" aria-label="Move down" ${last ? 'disabled' : ''}>↓</button>
-      <button type="button" class="btn icon" data-act="item-edit" data-id="${it.id}">Edit</button>
+      <button type="button" class="btn icon ghost" data-act="item-up" data-id="${it.id}" aria-label="${esc(t('moveUp'))}" ${first ? 'disabled' : ''}>↑</button>
+      <button type="button" class="btn icon ghost" data-act="item-down" data-id="${it.id}" aria-label="${esc(t('moveDown'))}" ${last ? 'disabled' : ''}>↓</button>
+      <button type="button" class="btn icon" data-act="item-edit" data-id="${it.id}">${esc(t('edit'))}</button>
     </div></div>`;
 }
 
 function renderAdmin() {
   // group filter
-  $('#filter-group').innerHTML = `<option value="all">All groups</option>` +
+  $('#filter-group').innerHTML = `<option value="all">${esc(t('allGroups'))}</option>` +
     MENU.groups.map((g) => `<option value="${g.id}" ${filterGroup === g.id ? 'selected' : ''}>${esc(gName(g))}</option>`).join('');
 
   // items, grouped in menu order; arrows move an item within its group
@@ -272,20 +267,20 @@ function renderAdmin() {
     return (showHeads ? `<div class="group-head">${esc(gName(g))}</div>` : '') + rows;
   }).join('');
   $('#item-list').innerHTML = html || (MENU.groups.length
-    ? '<p class="empty">No items yet. Tap “+ Add item”.</p>'
-    : '<p class="empty">Add a group first (Groups tab), then add items to it.</p>');
+    ? `<p class="empty">${esc(t('emptyItems'))}</p>`
+    : `<p class="empty">${esc(t('addGroupFirstLong'))}</p>`);
 
   // groups
   $('#group-list').innerHTML = MENU.groups.length ? MENU.groups.map((g, i) => `<div class="row">
       <div class="info">
-        <strong>${esc(gName(g))}${g.isVisible ? '' : '<span class="pill off">Hidden</span>'}</strong>
-        <small>${LANGS.slice(1).map((l) => esc(g.name[l.code] || '—')).join(' · ')} · ${plural(g.items.length, 'item')}</small>
+        <strong lang="${DE}">${esc(gName(g))}${g.isVisible ? '' : `<span class="pill off" lang="${getLang()}">${esc(t('hidden'))}</span>`}</strong>
+        <small>${LANGS.slice(1).map((l) => esc(g.name[l.code] || '—')).join(' · ')} · ${tn('nItems', g.items.length)}</small>
       </div>
       <div class="acts">
-        <button type="button" class="btn icon ghost" data-act="group-up" data-id="${g.id}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
-        <button type="button" class="btn icon ghost" data-act="group-down" data-id="${g.id}" aria-label="Move down" ${i === MENU.groups.length - 1 ? 'disabled' : ''}>↓</button>
-        <button type="button" class="btn icon" data-act="group-edit" data-id="${g.id}">Edit</button>
-      </div></div>`).join('') : '<p class="empty">No groups yet. Tap “+ Add group”.</p>';
+        <button type="button" class="btn icon ghost" data-act="group-up" data-id="${g.id}" aria-label="${esc(t('moveUp'))}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="btn icon ghost" data-act="group-down" data-id="${g.id}" aria-label="${esc(t('moveDown'))}" ${i === MENU.groups.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="btn icon" data-act="group-edit" data-id="${g.id}">${esc(t('edit'))}</button>
+      </div></div>`).join('') : `<p class="empty">${esc(t('emptyGroups'))}</p>`;
 
   // settings (don't overwrite what the owner is typing)
   const sf = $('#settings-form');
@@ -328,13 +323,13 @@ function editGroup(id) {
   const g = id ? findGroup(id) : { name: {}, isVisible: true, items: [] };
   if (!g) return;
   openSheet(`<form class="form" novalidate>
-      <h3>${id ? 'Edit group' : 'New group'}</h3>
-      <div class="field"><span class="fieldset-label">Name</span><div class="ml">${mlInputs('name', g.name, { required: true })}</div></div>
-      <label class="switch"><input type="checkbox" name="visible" ${g.isVisible ? 'checked' : ''}> Show on menu</label>
+      <h3>${esc(t(id ? 'editGroup' : 'newGroup'))}</h3>
+      <div class="field"><span class="fieldset-label">${esc(t('name'))}</span><div class="ml">${mlInputs('name', g.name, { required: true })}</div></div>
+      <label class="switch"><input type="checkbox" name="visible" ${g.isVisible ? 'checked' : ''}> ${esc(t('showOnMenu'))}</label>
       <p class="form-err hidden" data-err role="alert"></p>
       <div class="form-actions">
-        ${id ? '<button type="button" class="btn danger" data-del style="margin-right:auto">Delete</button>' : ''}
-        <button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary" data-save>Save</button>
+        ${id ? `<button type="button" class="btn danger" data-del style="margin-right:auto">${esc(t('delete'))}</button>` : ''}
+        <button type="button" class="btn" data-cancel>${esc(t('cancel'))}</button><button class="btn primary" data-save>${esc(t('save'))}</button>
       </div></form>`, (s) => {
     const f = $('form', s);
     $('[data-cancel]', s).onclick = closeSheet;
@@ -343,12 +338,12 @@ function editGroup(id) {
     if (del) del.onclick = () => {
       const n = g.items.length;
       confirmBox(
-        n ? `“${gName(g)}” and its ${plural(n, 'item')} will be deleted, including their photos.` : `“${gName(g)}” will be deleted.`,
+        n ? t('confirmDeleteGroupItems', { name: gName(g), n }) : t('confirmDelete', { name: gName(g) }),
         async () => {
           await api('DELETE', `/api/admin/groups/${id}`);
           if (filterGroup === id) filterGroup = 'all';
           await reload();
-          toast('Group deleted');
+          toast(t('groupDeleted'));
         },
       );
     };
@@ -364,7 +359,7 @@ function editGroup(id) {
           else await api('POST', '/api/admin/groups', body);
           closeSheet();
           await reload();
-          toast('Group saved');
+          toast(t('groupSaved'));
         } catch (err) {
           showFormError(f, err, (key) => {
             if (key.startsWith('name.')) return f.elements[key];
@@ -382,15 +377,15 @@ function editGroup(id) {
    ========================================================= */
 function optionRow(o = { name: {}, extraPriceCents: 0 }, n) {
   return `<div class="opt-row" ${o.id ? `data-opt-id="${o.id}"` : ''}>
-    <div class="head"><span>Option ${n}</span><button type="button" class="btn icon ghost" data-rm-opt aria-label="Remove option">✕</button></div>
+    <div class="head"><span>${esc(t('optionN', { n }))}</span><button type="button" class="btn icon ghost" data-rm-opt aria-label="${esc(t('removeOption'))}">✕</button></div>
     <div class="ml">${mlInputs('opt', o.name)}</div>
-    <div class="field"><label>Extra price in € (0 = included)</label>
+    <div class="field"><label>${esc(t('extraPrice'))}</label>
       <input class="inp" type="number" inputmode="decimal" step="0.01" min="0" max="1000" name="opt.price" value="${centsToInput(o.extraPriceCents ?? 0)}"></div>
   </div>`;
 }
 
 function editItem(id) {
-  if (!MENU.groups.length) { toast('Add a group first'); return; }
+  if (!MENU.groups.length) { toast(t('addGroupFirst')); return; }
   const existing = id ? findItem(id) : null;
   if (id && !existing) return;
   const it = existing ? structuredClone(existing) : {
@@ -400,33 +395,33 @@ function editItem(id) {
   let pendingImage = null; // new item: image is uploaded after the first save
 
   openSheet(`<form class="form" novalidate>
-      <h3>${id ? 'Edit item' : 'New item'}</h3>
-      <div class="field"><label for="f-group">Group</label>
+      <h3>${esc(t(id ? 'editItem' : 'newItem'))}</h3>
+      <div class="field"><label for="f-group">${esc(t('group'))}</label>
         <select class="inp" id="f-group" name="groupId">${MENU.groups.map((g) =>
-          `<option value="${g.id}" ${g.id === it.groupId ? 'selected' : ''}>${esc(gName(g))}${g.isVisible ? '' : ' (hidden)'}</option>`).join('')}</select></div>
-      <div class="field"><span class="fieldset-label">Name</span><div class="ml">${mlInputs('name', it.name, { required: true })}</div></div>
-      <div class="field"><span class="fieldset-label">Description</span><div class="ml">${mlInputs('desc', it.description, { textarea: true, max: 600 })}</div></div>
+          `<option value="${g.id}" ${g.id === it.groupId ? 'selected' : ''}>${esc(gName(g))}${g.isVisible ? '' : ` ${esc(t('hiddenSuffix'))}`}</option>`).join('')}</select></div>
+      <div class="field"><span class="fieldset-label">${esc(t('name'))}</span><div class="ml">${mlInputs('name', it.name, { required: true })}</div></div>
+      <div class="field"><span class="fieldset-label">${esc(t('description'))}</span><div class="ml">${mlInputs('desc', it.description, { textarea: true, max: 600 })}</div></div>
       <div class="two">
-        <div class="field"><label for="f-price">Price (€)</label>
+        <div class="field"><label for="f-price">${esc(t('price'))}</label>
           <input class="inp" id="f-price" type="number" inputmode="decimal" step="0.01" min="0" max="1000" name="price" value="${centsToInput(it.priceCents)}" required></div>
-        <div class="field" style="align-self:end"><label class="switch"><input type="checkbox" name="available" ${it.isAvailable ? 'checked' : ''}> Available</label></div>
+        <div class="field" style="align-self:end"><label class="switch"><input type="checkbox" name="available" ${it.isAvailable ? 'checked' : ''}> ${esc(t('available'))}</label></div>
       </div>
-      <div class="field"><span class="fieldset-label">Image</span>
+      <div class="field"><span class="fieldset-label">${esc(t('image'))}</span>
         <div class="img-box">
           <img class="preview" alt="" ${it.imageUrl ? `src="${esc(it.imageUrl)}"` : ''}>
           <div style="display:grid;gap:6px">
-            <label class="btn" style="text-align:center;display:flex;align-items:center;justify-content:center" data-pick>Choose image<input type="file" accept="image/*" hidden data-file></label>
-            <button type="button" class="btn ghost danger" data-rm-img ${it.imageUrl ? '' : 'hidden'}>Remove image</button>
-            <span class="uploading hidden" data-uploading>Uploading…</span>
+            <label class="btn" style="text-align:center;display:flex;align-items:center;justify-content:center" data-pick>${esc(t('chooseImage'))}<input type="file" accept="image/*" hidden data-file></label>
+            <button type="button" class="btn ghost danger" data-rm-img ${it.imageUrl ? '' : 'hidden'}>${esc(t('removeImage'))}</button>
+            <span class="uploading hidden" data-uploading></span>
           </div>
         </div></div>
-      <div class="field"><span class="fieldset-label">Options <span style="font-weight:400;color:var(--muted)">— sizes, extras, choices (max. 20)</span></span>
+      <div class="field"><span class="fieldset-label">${esc(t('options'))} <span style="font-weight:400;color:var(--muted)">${esc(t('optionsHint'))}</span></span>
         <div style="display:grid;gap:8px" data-opts>${it.options.map((o, i) => optionRow(o, i + 1)).join('')}</div>
-        <button type="button" class="btn" style="margin-top:8px" data-add-opt>+ Add option</button></div>
+        <button type="button" class="btn" style="margin-top:8px" data-add-opt>${esc(t('addOption'))}</button></div>
       <p class="form-err hidden" data-err role="alert"></p>
       <div class="form-actions">
-        ${id ? '<button type="button" class="btn danger" data-del style="margin-right:auto">Delete</button>' : ''}
-        <button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary" data-save>Save</button>
+        ${id ? `<button type="button" class="btn danger" data-del style="margin-right:auto">${esc(t('delete'))}</button>` : ''}
+        <button type="button" class="btn" data-cancel>${esc(t('cancel'))}</button><button class="btn primary" data-save>${esc(t('save'))}</button>
       </div></form>`, (s) => {
     const f = $('form', s);
     const opts = $('[data-opts]', s);
@@ -434,11 +429,11 @@ function editItem(id) {
     const rmImg = $('[data-rm-img]', s);
     const uploading = $('[data-uploading]', s);
     const save = $('[data-save]', s);
-    const renumber = () => $$('.opt-row .head span', opts).forEach((el, i) => (el.textContent = `Option ${i + 1}`));
+    const renumber = () => $$('.opt-row .head span', opts).forEach((el, i) => (el.textContent = t('optionN', { n: i + 1 })));
 
     $('[data-cancel]', s).onclick = closeSheet;
     $('[data-add-opt]', s).onclick = () => {
-      if (opts.children.length >= 20) { toast('At most 20 options'); return; }
+      if (opts.children.length >= 20) { toast(t('maxOptions')); return; }
       opts.insertAdjacentHTML('beforeend', optionRow(undefined, opts.children.length + 1));
       $('.opt-row:last-child input', opts)?.focus();
     };
@@ -456,7 +451,7 @@ function editItem(id) {
       const file = e.target.files[0];
       e.target.value = '';
       if (!file) return;
-      uploading.textContent = id ? 'Uploading…' : 'Preparing…';
+      uploading.textContent = t(id ? 'uploading' : 'preparing');
       uploading.classList.remove('hidden');
       save.disabled = true;
       let blob;
@@ -465,7 +460,7 @@ function editItem(id) {
       } catch {
         uploading.classList.add('hidden');
         save.disabled = false;
-        toast('That file could not be read as an image.', { error: true });
+        toast(t('notAnImage'), { error: true });
         return;
       }
       if (!id) {
@@ -478,10 +473,10 @@ function editItem(id) {
       try {
         const { imageUrl } = await uploadImage(id, blob);
         setPreview(imageUrl);
-        toast('Image saved');
+        toast(t('imageSaved'));
         reload().catch(() => {});
       } catch (err) {
-        if (err.status !== 401) toast(err.errors?.file || err.message, { error: true });
+        if (err.status !== 401) toast(err.errors?.file ? serverMessage(err.errors.file) : err.message, { error: true });
       } finally {
         uploading.classList.add('hidden');
         save.disabled = false;
@@ -494,7 +489,7 @@ function editItem(id) {
         try {
           await api('DELETE', `/api/admin/items/${id}/image`);
           setPreview(null);
-          toast('Image removed');
+          toast(t('imageRemoved'));
           reload().catch(() => {});
         } catch (err) {
           if (err.status !== 401) toast(err.message, { error: true });
@@ -503,10 +498,10 @@ function editItem(id) {
     };
 
     const del = $('[data-del]', s);
-    if (del) del.onclick = () => confirmBox(`“${it.name[DE]}” will be deleted.`, async () => {
+    if (del) del.onclick = () => confirmBox(t('confirmDelete', { name: it.name[DE] }), async () => {
       await api('DELETE', `/api/admin/items/${id}`);
       await reload();
-      toast('Item deleted');
+      toast(t('itemDeleted'));
     });
 
     f.onsubmit = (e) => {
@@ -515,16 +510,16 @@ function editItem(id) {
       if (!requireGerman(f, 'name')) return;
 
       const priceCents = toCents(f.elements.price.value);
-      if (priceCents === null) { markField(f.elements.price, 'Enter a price, e.g. 12.50'); f.elements.price.focus(); return; }
-      if (priceCents > PRICE_MAX_CENTS) { markField(f.elements.price, `At most ${euro(PRICE_MAX_CENTS)}`); f.elements.price.focus(); return; }
+      if (priceCents === null) { markField(f.elements.price, t('enterPrice')); f.elements.price.focus(); return; }
+      if (priceCents > PRICE_MAX_CENTS) { markField(f.elements.price, t('maxAmount', { amount: euro(PRICE_MAX_CENTS) })); f.elements.price.focus(); return; }
 
       // Rows with no name at all are ignored; the rest are sent in order (the API keys errors by index).
       const rows = $$('.opt-row', opts).filter((row) => Object.values(readMl(row, 'opt')).some(Boolean));
       let bad = false;
       const options = rows.map((row) => {
         const extra = toCents($('[name="opt.price"]', row).value || '0');
-        if (extra === null) { markField($('[name="opt.price"]', row), 'Enter an amount, e.g. 1.50'); bad = true; }
-        else if (extra > PRICE_MAX_CENTS) { markField($('[name="opt.price"]', row), `At most ${euro(PRICE_MAX_CENTS)}`); bad = true; }
+        if (extra === null) { markField($('[name="opt.price"]', row), t('enterAmount')); bad = true; }
+        else if (extra > PRICE_MAX_CENTS) { markField($('[name="opt.price"]', row), t('maxAmount', { amount: euro(PRICE_MAX_CENTS) })); bad = true; }
         if (!requireGerman(row, 'opt')) bad = true;
         const o = { name: readMl(row, 'opt'), extraPriceCents: extra ?? 0 };
         if (row.dataset.optId) o.id = Number(row.dataset.optId);
@@ -553,13 +548,14 @@ function editItem(id) {
               if (err.status === 401) return;
               closeSheet();
               await reload();
-              toast(`Item saved, but the image upload failed: ${err.errors?.file || err.message}`, { error: true });
+              const why = err.errors?.file ? serverMessage(err.errors.file) : err.message;
+              toast(t('itemSavedImageFailed', { msg: why }), { error: true });
               return;
             }
           }
           closeSheet();
           await reload();
-          toast('Item saved');
+          toast(t('itemSaved'));
         } catch (err) {
           if (err.status === 401) return;
           showFormError(f, err, (key) => {
@@ -592,13 +588,13 @@ $('#settings-form').onsubmit = (e) => {
   const f = e.target;
   clearErrors(f);
   const name = f.elements.name.value.trim();
-  if (!name) { markField(f.elements.name, 'Required'); f.elements.name.focus(); return; }
+  if (!name) { markField(f.elements.name, t('required')); f.elements.name.focus(); return; }
   busy($('button.primary', f), async () => {
     try {
       MENU.settings = await api('PUT', '/api/admin/settings', { name, tagline: readMl(f, 'tagline') });
       document.activeElement?.blur();
       renderAdmin();
-      toast('Saved');
+      toast(t('saved'));
     } catch (err) {
       if (err.status !== 401) showFormError(f, err, (key) => f.elements[key]);
     }
@@ -634,6 +630,42 @@ $('#logout').onclick = (e) => busy(e.currentTarget, async () => {
   try { await api('POST', '/api/auth/logout'); } catch { /* logged out either way */ }
   showLogin();
 });
+
+/* =========================================================
+   ADMIN LANGUAGE (DE / EN / ΕΛ)
+   ========================================================= */
+/** Static texts in admin/index.html: data-i18n="key" (text), data-i18n-aria="key" (aria-label). */
+function applyTexts() {
+  const lang = getLang();
+  document.documentElement.lang = lang;
+  document.title = `${t('title')} — Gyros Sta Adelfia`;
+  $$('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  $$('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+  $$('[data-langs]').forEach((box) => {
+    box.setAttribute('aria-label', t('language'));
+    box.innerHTML = LANGS.map((l) =>
+      `<button type="button" data-lang="${l.code}" lang="${l.code}" aria-pressed="${l.code === lang}">${l.label}</button>`).join('');
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-langs] [data-lang]');
+  if (!b || b.dataset.lang === getLang()) return;
+  setLang(b.dataset.lang);
+  // Keep a ?lang= link in step with the choice, so a reload shows the same language.
+  const url = new URL(location.href);
+  if (url.searchParams.has('lang')) {
+    url.searchParams.set('lang', b.dataset.lang);
+    history.replaceState(null, '', url);
+  }
+  applyTexts();
+  // Re-render the lists. Field errors on the login form are dropped (they were in the old language).
+  if (!$('#view-admin').classList.contains('hidden')) renderAdmin();
+  else clearErrors($('#login-form'));
+  $(`[data-langs] [data-lang="${b.dataset.lang}"]`, b.closest('[data-langs]').parentElement)?.focus();
+});
+
+applyTexts();
 
 /* =========================================================
    LOGIN / VIEWS
@@ -672,15 +704,15 @@ $('#login-form').onsubmit = (e) => {
   clearErrors(f);
   const username = f.elements.username.value.trim();
   const password = f.elements.password.value;
-  if (!username) { markField(f.elements.username, 'Required'); f.elements.username.focus(); return; }
-  if (!password) { markField(f.elements.password, 'Required'); f.elements.password.focus(); return; }
+  if (!username) { markField(f.elements.username, t('required')); f.elements.username.focus(); return; }
+  if (!password) { markField(f.elements.password, t('required')); f.elements.password.focus(); return; }
   busy($('button.primary', f), async () => {
     try {
       await api('POST', '/api/auth/login', { username, password });
       f.reset();
       await showDashboard();
     } catch (err) {
-      showFormError(f, err.status === 401 ? new ApiError(401, 'Wrong username or password.') : err);
+      showFormError(f, err.status === 401 ? new ApiError(401, t('wrongLogin')) : err);
       f.elements.password.value = '';
       f.elements.password.focus();
     }
@@ -694,6 +726,6 @@ $('#login-form').onsubmit = (e) => {
     if (res.ok) await showDashboard();
     else showLogin();
   } catch {
-    showLogin('No connection to the server.');
+    showLogin(t('noConnection'));
   }
 })();
