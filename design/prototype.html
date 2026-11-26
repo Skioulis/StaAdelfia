@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restaurant Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&family=Commissioner:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3f7fb; --card:#ffffff; --ink:#212121; --muted:#5d6570; --line:#dbe4ee;
+    --accent:#2e5b9d; --accent-soft:#e3ebf6; --sky:#007bbf; --sky-soft:#e0f0f9; --danger:#b3261e;
+    --radius:14px; --shadow:0 1px 2px rgba(33,33,33,.05),0 6px 20px rgba(46,91,157,.07);
+    --serif:'Literata',Georgia,serif; --sans:'Commissioner',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  button,input,textarea,select{font:inherit;color:inherit}
+  button{cursor:pointer}
+  .hidden{display:none!important}
+
+  /* ---------- MENU PAGE ---------- */
+  .m-header{padding:24px 20px 18px;text-align:center;position:relative;background:#fff;border-bottom:4px solid var(--accent)}
+  .m-logo{display:block;margin:6px auto 10px;width:min(230px,60vw);height:auto}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .m-header .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .m-header h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,8vw,44px);margin:6px 0 4px;letter-spacing:-.01em}
+  .m-header p{margin:0;color:var(--muted);font-size:15px}
+  .m-header .langs{background:var(--paper)}
+  .langs{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;margin-top:16px}
+  .langs button{border:0;background:transparent;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+  .langs button[aria-pressed="true"]{background:var(--accent);color:#fff}
+
+  .m-nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .m-nav .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 20px;scrollbar-width:none;max-width:760px;margin:0 auto}
+  .m-nav .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:500;white-space:nowrap}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .m-main{max-width:760px;margin:0 auto;padding:8px 16px 80px}
+  .group{padding-top:22px;scroll-margin-top:64px}
+  .group h2{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 4px 12px;display:flex;align-items:baseline;gap:10px}
+  .group h2::after{content:"";flex:1;border-bottom:1px dashed var(--line);transform:translateY(-6px)}
+  .items{display:grid;gap:10px}
+  .item{display:grid;grid-template-columns:1fr 92px;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:left;width:100%;box-shadow:var(--shadow)}
+  .item.no-img{grid-template-columns:1fr}
+  .item h3{margin:0;font-size:17px;font-weight:600;line-height:1.25}
+  .item .desc{margin:4px 0 0;color:var(--muted);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .item .bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .price{font-family:var(--serif);font-weight:600;font-size:18px;color:var(--accent);white-space:nowrap}
+  .opt-hint{font-size:12px;color:var(--sky);background:var(--sky-soft);border-radius:999px;padding:3px 9px;font-weight:500}
+  .thumb{width:92px;height:92px;border-radius:10px;object-fit:cover;background:var(--accent-soft)}
+  .item.unavailable{opacity:.55}
+  .badge-off{font-size:12px;color:var(--danger);font-weight:600}
+  .empty{color:var(--muted);text-align:center;padding:40px 10px}
+
+  /* sheet (item detail + admin dialogs) */
+  .overlay{position:fixed;inset:0;background:rgba(20,24,26,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+  @media(min-width:700px){.overlay{align-items:center}}
+  .sheet{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.2)}
+  @media(min-width:700px){.sheet{border-radius:20px}}
+  .sheet .hero{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--accent-soft)}
+  .sheet .body{padding:20px}
+  .sheet h3{font-family:var(--serif);font-size:26px;font-weight:600;margin:0 0 6px}
+  .sheet .full-desc{color:var(--muted);margin:0 0 16px}
+  .opts{list-style:none;margin:0 0 16px;padding:0;border-top:1px solid var(--line)}
+  .opts li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .opts li span:last-child{color:var(--muted);white-space:nowrap}
+  .close-wrap{position:sticky;top:0;height:0;z-index:2}
+  .sheet .close{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,253,248,.92);font-size:20px;line-height:1;box-shadow:var(--shadow)}
+  .label-sm{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 6px}
+
+  .admin-link{display:block;text-align:center;color:var(--muted);font-size:13px;margin-top:40px}
+
+  /* ---------- ADMIN PAGE ---------- */
+  .a-top{position:sticky;top:0;z-index:5;background:var(--accent);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .a-top h1{font-size:17px;margin:0;font-weight:600;flex:1;display:flex;align-items:center;gap:10px}
+  .a-top h1 img{height:30px;background:#fff;border-radius:6px;padding:2px 4px}
+  .a-top a{color:#fff;font-size:14px;opacity:.85}
+  .a-note{background:#fff6d6;border-bottom:1px solid #eadca5;color:#6b5a14;font-size:13px;padding:8px 16px}
+  .a-main{max-width:860px;margin:0 auto;padding:16px 16px 100px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px}
+  .tabs button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;font-weight:600}
+  .tabs button[aria-selected="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .toolbar select{flex:1;min-width:160px}
+  .btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.danger{color:var(--danger)}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.icon{padding:7px 10px;min-width:38px}
+  .list{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+  .row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .row img,.row .ph{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:var(--accent-soft)}
+  .row .info{flex:1;min-width:0}
+  .row .info strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .info small{color:var(--muted)}
+  .row .acts{display:flex;gap:2px;flex:0 0 auto}
+  .pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#eee;color:#555;margin-left:6px;vertical-align:middle}
+  .pill.off{background:#fbe3e1;color:var(--danger)}
+
+  .form{padding:20px;display:grid;gap:16px}
+  .form h3{font-family:var(--serif);font-size:22px;margin:0}
+  .field label,.fieldset-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .ml{display:grid;gap:6px}
+  .ml .in{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .ml .in span{flex:0 0 42px;display:flex;align-items:center;justify-content:center;background:var(--paper);font-size:12px;font-weight:700;color:var(--muted);border-right:1px solid var(--line)}
+  .ml .in input,.ml .in textarea{flex:1;border:0;padding:9px 10px;outline:none;background:transparent;resize:vertical;min-width:0}
+  .ml .in:focus-within,.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;outline:none}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .img-box{display:flex;gap:12px;align-items:center}
+  .img-box .preview{width:96px;height:96px;border-radius:10px;object-fit:cover;background:var(--accent-soft);border:1px dashed var(--line)}
+  .opt-row{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;background:var(--paper)}
+  .opt-row .head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--muted)}
+  .switch{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+  .switch input{width:20px;height:20px;accent-color:var(--accent)}
+  .form-actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--card);padding:12px 20px;border-top:1px solid var(--line);margin:0 -20px -20px}
+  .err{color:var(--danger);font-size:13px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:40;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+
+<!-- ============ MENU PAGE ============ -->
+<div id="view-menu">
+  <header class="m-header">
+    <div class="eyebrow" id="m-eyebrow"></div>
+    <img class="m-logo" src="logo.png" alt="">
+    <h1 id="m-name" class="sr-only"></h1>
+    <p id="m-tagline"></p>
+    <div class="langs" id="m-langs" role="group" aria-label="Language"></div>
+  </header>
+  <nav class="m-nav"><div class="chips" id="m-chips"></div></nav>
+  <main class="m-main" id="m-groups"></main>
+  <a class="admin-link" href="#admin">Admin</a>
+</div>
+
+<!-- ============ ADMIN PAGE ============ -->
+<div id="view-admin" class="hidden">
+  <div class="a-top">
+    <h1><img src="logo.png" alt="">Menu admin</h1>
+    <a href="#menu">View menu →</a>
+  </div>
+  <div class="a-note">Static demo: changes are saved in this browser only. <button class="btn ghost" style="padding:0;font-size:13px;text-decoration:underline;color:inherit" id="reset-demo">Reset demo data</button></div>
+  <main class="a-main">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="items" aria-selected="true">Items</button>
+      <button role="tab" data-tab="groups" aria-selected="false">Groups</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Restaurant</button>
+    </div>
+
+    <section id="tab-items">
+      <div class="toolbar">
+        <select class="inp" id="filter-group" aria-label="Filter by group"></select>
+        <button class="btn primary" id="add-item">+ Add item</button>
+      </div>
+      <div class="list" id="item-list"></div>
+    </section>
+
+    <section id="tab-groups" class="hidden">
+      <div class="toolbar">
+        <div style="flex:1;color:var(--muted);font-size:14px">Groups appear on the menu in this order.</div>
+        <button class="btn primary" id="add-group">+ Add group</button>
+      </div>
+      <div class="list" id="group-list"></div>
+    </section>
+
+    <section id="tab-settings" class="hidden">
+      <form class="form" id="settings-form" style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius)">
+        <div class="field"><span class="fieldset-label">Restaurant name</span><input class="inp" name="name" required></div>
+        <div class="field"><span class="fieldset-label">Tagline</span><div class="ml" data-ml="tagline"></div></div>
+        <div style="display:flex;justify-content:flex-end"><button class="btn primary">Save</button></div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<div id="overlay-root"></div>
+
+<script>
+/* =========================================================
+   CONFIG — change languages here (first one is the default)
+   ========================================================= */
+const LANGS = [
+  { code:'de', label:'DE', locale:'de-AT' },   // Austrian German (default)
+  { code:'en', label:'EN', locale:'en-IE' },
+  { code:'el', label:'ΕΛ', locale:'el-GR' },
+];
+const CURRENCY = 'EUR';
+const STORE_KEY = 'menu-demo-v3';
+
+/* UI text on the public menu, per language */
+const UI = {
+  en:{ eyebrow:'Menu', options:'Options', choose:'Options available', unavailable:'Not available today', empty:'The menu is being prepared.', included:'included' },
+  de:{ eyebrow:'Speisekarte', options:'Auswahl', choose:'Mit Auswahl', unavailable:'Heute nicht verfügbar', empty:'Die Speisekarte wird gerade vorbereitet.', included:'inklusive' },
+  el:{ eyebrow:'Μενού', options:'Επιλογές', choose:'Με επιλογές', unavailable:'Μη διαθέσιμο σήμερα', empty:'Το μενού ετοιμάζεται.', included:'περιλαμβάνεται' },
+};
+
+/* =========================================================
+   SAMPLE DATA
+   ========================================================= */
+function svgImg(bg, fg, glyph){
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><circle cx="200" cy="150" r="92" fill="${fg}" opacity=".25"/><text x="200" y="185" font-size="110" text-anchor="middle" font-family="Georgia,serif" fill="${fg}">${glyph}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+}
+const uid = () => Math.random().toString(36).slice(2,10);
+
+function sampleData(){
+  const g1=uid(), g2=uid(), g3=uid();
+  return {
+    settings:{ name:'Gyros Sta Adelfia', tagline:{ en:'Seafood, grill & good company', de:'Meeresfrüchte, Grill & gute Gesellschaft', el:'Θαλασσινά, ψητά και καλή παρέα' } },
+    groups:[
+      { id:g1, name:{en:'Seafood', de:'Meeresfrüchte', el:'Θαλασσινά'}, visible:true },
+      { id:g2, name:{en:'Burgers', de:'Burger', el:'Μπέργκερ'}, visible:true },
+      { id:g3, name:{en:'Side dishes', de:'Beilagen', el:'Συνοδευτικά'}, visible:true },
+    ],
+    items:[
+      { id:uid(), groupId:g1, price:16.5, available:true, image:svgImg('#e0f0f9','#007bbf','≈'),
+        name:{en:'Grilled octopus', de:'Gegrillter Oktopus', el:'Χταπόδι σχάρας'},
+        desc:{en:'Charcoal-grilled octopus with olive oil, lemon and oregano.', de:'Oktopus vom Holzkohlegrill mit Olivenöl, Zitrone und Oregano.', el:'Χταπόδι στα κάρβουνα με ελαιόλαδο, λεμόνι και ρίγανη.'},
+        options:[] },
+      { id:uid(), groupId:g1, price:14, available:true, image:svgImg('#e3ebf6','#2e5b9d','◐'),
+        name:{en:'Fried calamari', de:'Frittierte Calamari', el:'Καλαμαράκια τηγανητά'},
+        desc:{en:'Crispy squid rings with garlic dip.', de:'Knusprige Tintenfischringe mit Knoblauch-Dip.', el:'Τραγανά καλαμαράκια με σκορδαλιά.'},
+        options:[
+          { name:{en:'Small portion', de:'Kleine Portion', el:'Μικρή μερίδα'}, price:0 },
+          { name:{en:'Large portion', de:'Große Portion', el:'Μεγάλη μερίδα'}, price:4 },
+        ] },
+      { id:uid(), groupId:g1, price:24, available:false, image:'',
+        name:{en:'Sea bream fillet', de:'Doradenfilet', el:'Φιλέτο τσιπούρας'},
+        desc:{en:'Pan-seared with seasonal greens.', de:'In der Pfanne gebraten, mit saisonalem Gemüse.', el:'Στο τηγάνι, με λαχανικά εποχής.'},
+        options:[] },
+      { id:uid(), groupId:g2, price:13.9, available:true, image:svgImg('#e3ebf6','#212121','●'),
+        name:{en:'Classic beef burger', de:'Klassischer Rindfleischburger', el:'Κλασικό μπέργκερ μοσχάρι'},
+        desc:{en:'180 g beef patty, cheddar, tomato, lettuce, house sauce.', de:'180 g Rindfleisch, Cheddar, Paradeiser, Salat, Haussauce.', el:'180 γρ. μοσχάρι, τσένταρ, ντομάτα, μαρούλι, σάλτσα του μαγαζιού.'},
+        options:[
+          { name:{en:'Double patty', de:'Doppeltes Patty', el:'Διπλό μπιφτέκι'}, price:4.5 },
+          { name:{en:'Add bacon', de:'Mit Speck', el:'Με μπέικον'}, price:1.5 },
+          { name:{en:'Gluten-free bun', de:'Glutenfreies Brötchen', el:'Ψωμάκι χωρίς γλουτένη'}, price:1 },
+        ] },
+      { id:uid(), groupId:g2, price:12.5, available:true, image:svgImg('#e0f0f9','#2e5b9d','✿'),
+        name:{en:'Veggie burger', de:'Veggie-Burger', el:'Χορτοφαγικό μπέργκερ'},
+        desc:{en:'Chickpea patty, feta, roasted peppers, rocket.', de:'Kichererbsen-Laibchen, Feta, geröstete Paprika, Rucola.', el:'Μπιφτέκι ρεβιθιού, φέτα, ψητές πιπεριές, ρόκα.'},
+        options:[] },
+      { id:uid(), groupId:g3, price:4.5, available:true, image:svgImg('#e3ebf6','#007bbf','≡'),
+        name:{en:'Fries', de:'Pommes', el:'Πατάτες τηγανητές'},
+        desc:{en:'Hand-cut, sea salt.', de:'Handgeschnitten, mit Meersalz.', el:'Κομμένες στο χέρι, με θαλασσινό αλάτι.'},
+        options:[
+          { name:{en:'Sweet potato instead', de:'Stattdessen Süßkartoffel', el:'Με γλυκοπατάτα'}, price:1.5 },
+        ] },
+      { id:uid(), groupId:g3, price:5, available:true, image:'',
+        name:{en:'Potato salad', de:'Erdäpfelsalat', el:'Πατατοσαλάτα'},
+        desc:{en:'Austrian-style, with chives and vinegar dressing.', de:'Nach Wiener Art, mit Schnittlauch und Essig-Marinade.', el:'Αυστριακή συνταγή, με σχοινόπρασο και ξίδι.'},
+        options:[] },
+    ]
+  };
+}
+
+/* =========================================================
+   STORE (localStorage for the demo — replace with API later)
+   ========================================================= */
+let DB;
+function load(){
+  try { const raw = localStorage.getItem(STORE_KEY); DB = raw ? JSON.parse(raw) : sampleData(); }
+  catch { DB = sampleData(); }
+}
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); return true; }
+  catch(e){ toast('Could not save — browser storage is full or blocked (try a smaller image).'); return false; }
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+let lang = (() => {
+  try { const s = localStorage.getItem('menu-lang'); if (s && LANGS.some(l=>l.code===s)) return s; } catch {}
+  const nav = (navigator.language||'').slice(0,2);
+  return LANGS.some(l=>l.code===nav) ? nav : LANGS[0].code;
+})();
+const tr = obj => (obj && (obj[lang] || obj[LANGS[0].code] || Object.values(obj).find(Boolean))) || '';
+const locale = () => LANGS.find(l=>l.code===lang).locale;
+const money = n => new Intl.NumberFormat(locale(), {style:'currency', currency:CURRENCY}).format(n||0);
+const ui = k => (UI[lang]||UI[LANGS[0].code])[k];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = (s, r=document) => r.querySelector(s);
+function toast(msg){
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 2600);
+}
+function openSheet(html, onMount){
+  const root = $('#overlay-root');
+  root.innerHTML = `<div class="overlay"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const ov = root.firstElementChild;
+  ov.addEventListener('click', e => { if (e.target === ov) closeSheet(); });
+  document.body.style.overflow='hidden';
+  onMount && onMount(ov.firstElementChild);
+}
+function closeSheet(){ $('#overlay-root').innerHTML=''; document.body.style.overflow=''; }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeSheet(); });
+
+/* =========================================================
+   MENU PAGE
+   ========================================================= */
+function renderMenu(){
+  document.documentElement.lang = lang;
+  $('#m-eyebrow').textContent = ui('eyebrow');
+  $('#m-name').textContent = DB.settings.name;
+  $('#m-tagline').textContent = tr(DB.settings.tagline);
+  document.title = DB.settings.name + ' — ' + ui('eyebrow');
+
+  $('#m-langs').innerHTML = LANGS.map(l =>
+    `<button data-lang="${l.code}" aria-pressed="${l.code===lang}">${l.label}</button>`).join('');
+
+  const groups = DB.groups.filter(g => g.visible && DB.items.some(i => i.groupId===g.id));
+  $('#m-chips').innerHTML = groups.map((g,i) =>
+    `<button class="chip ${i===0?'active':''}" data-target="g-${g.id}">${esc(tr(g.name))}</button>`).join('');
+
+  $('#m-groups').innerHTML = groups.length ? groups.map(g => `
+    <section class="group" id="g-${g.id}">
+      <h2>${esc(tr(g.name))}</h2>
+      <div class="items">
+        ${DB.items.filter(i=>i.groupId===g.id).map(it => `
+          <button class="item ${it.image?'':'no-img'} ${it.available?'':'unavailable'}" data-item="${it.id}">
+            <div>
+              <h3>${esc(tr(it.name))}</h3>
+              ${tr(it.desc) ? `<p class="desc">${esc(tr(it.desc))}</p>` : ''}
+              <div class="bottom">
+                <span class="price">${money(it.price)}</span>
+                ${!it.available ? `<span class="badge-off">${ui('unavailable')}</span>`
+                  : it.options.length ? `<span class="opt-hint">${ui('choose')}</span>` : ''}
+              </div>
+            </div>
+            ${it.image ? `<img class="thumb" src="${it.image}" alt="">` : ''}
+          </button>`).join('')}
+      </div>
+    </section>`).join('') : `<p class="empty">${ui('empty')}</p>`;
+  setupScrollSpy();
+}
+
+function showItem(id){
+  const it = DB.items.find(i=>i.id===id); if (!it) return;
+  openSheet(`
+    <div class="close-wrap"><button class="close" aria-label="Close">×</button></div>
+    ${it.image ? `<img class="hero" src="${it.image}" alt="">` : '<div style="height:44px"></div>'}
+    <div class="body">
+      <h3>${esc(tr(it.name))}</h3>
+      ${tr(it.desc) ? `<p class="full-desc">${esc(tr(it.desc))}</p>` : ''}
+      ${it.options.length ? `<p class="label-sm">${ui('options')}</p>
+        <ul class="opts">${it.options.map(o=>`<li><span>${esc(tr(o.name))}</span><span>${o.price>0?'+ '+money(o.price):ui('included')}</span></li>`).join('')}</ul>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="price" style="font-size:24px">${money(it.price)}</span>
+        ${!it.available ? `<span class="badge-off">${ui('unavailable')}</span>` : ''}
+      </div>
+    </div>`, s => $('.close', s).onclick = closeSheet);
+}
+
+let spy;
+function setupScrollSpy(){
+  spy && spy.disconnect();
+  spy = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      document.querySelectorAll('.chip').forEach(c => {
+        const on = c.dataset.target === e.target.id;
+        c.classList.toggle('active', on);
+        if (on) c.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+      });
+    });
+  }, { rootMargin:'-70px 0px -70% 0px' });
+  document.querySelectorAll('.group').forEach(s => spy.observe(s));
+}
+
+$('#view-menu').addEventListener('click', e => {
+  const lb = e.target.closest('[data-lang]');
+  if (lb){ lang = lb.dataset.lang; try{localStorage.setItem('menu-lang',lang)}catch{} renderMenu(); return; }
+  const chip = e.target.closest('.chip');
+  if (chip){ document.getElementById(chip.dataset.target)?.scrollIntoView({behavior:'smooth'}); return; }
+  const item = e.target.closest('[data-item]');
+  if (item) showItem(item.dataset.item);
+});
+
+/* =========================================================
+   ADMIN PAGE
+   ========================================================= */
+let filterGroup = 'all';
+const gName = g => g.name[LANGS[0].code] || tr(g.name) || '(no name)';
+
+function mlInputs(key, values={}, {textarea=false, required=false}={}){
+  return LANGS.map((l,i) => `<div class="in"><span>${l.label}</span>${
+    textarea
+      ? `<textarea rows="2" name="${key}.${l.code}">${esc(values[l.code]||'')}</textarea>`
+      : `<input name="${key}.${l.code}" value="${esc(values[l.code]||'')}" ${required && i===0 ? 'required' : ''}>`
+  }</div>`).join('');
+}
+function readMl(form, key){
+  const o = {}; LANGS.forEach(l => o[l.code] = (form.elements[`${key}.${l.code}`]?.value||'').trim()); return o;
+}
+
+function renderAdmin(){
+  // group filter
+  $('#filter-group').innerHTML = `<option value="all">All groups</option>` +
+    DB.groups.map(g=>`<option value="${g.id}" ${filterGroup===g.id?'selected':''}>${esc(gName(g))}</option>`).join('');
+
+  // items
+  const items = DB.items.filter(i => filterGroup==='all' || i.groupId===filterGroup);
+  $('#item-list').innerHTML = items.length ? items.map(it => {
+    const g = DB.groups.find(g=>g.id===it.groupId);
+    return `<div class="row">
+      ${it.image ? `<img src="${it.image}" alt="">` : '<div class="ph"></div>'}
+      <div class="info">
+        <strong>${esc(it.name[LANGS[0].code]||'(no name)')}${it.available?'':'<span class="pill off">Hidden</span>'}</strong>
+        <small>${esc(g?gName(g):'—')} · ${new Intl.NumberFormat('de-AT',{style:'currency',currency:CURRENCY}).format(it.price)}${it.options.length?` · ${it.options.length} option${it.options.length>1?'s':''}`:''}</small>
+      </div>
+      <div class="acts">
+        <button class="btn icon ghost" data-act="item-up" data-id="${it.id}" aria-label="Move up">↑</button>
+        <button class="btn icon ghost" data-act="item-down" data-id="${it.id}" aria-label="Move down">↓</button>
+        <button class="btn icon" data-act="item-edit" data-id="${it.id}">Edit</button>
+      </div></div>`;
+  }).join('') : `<p class="empty">No items yet. Tap “+ Add item”.</p>`;
+
+  // groups
+  $('#group-list').innerHTML = DB.groups.length ? DB.groups.map(g => {
+    const n = DB.items.filter(i=>i.groupId===g.id).length;
+    return `<div class="row">
+      <div class="info">
+        <strong>${esc(gName(g))}${g.visible?'':'<span class="pill off">Hidden</span>'}</strong>
+        <small>${LANGS.slice(1).map(l=>esc(g.name[l.code]||'—')).join(' · ')} · ${n} item${n===1?'':'s'}</small>
+      </div>
+      <div class="acts">
+        <button class="btn icon ghost" data-act="group-up" data-id="${g.id}" aria-label="Move up">↑</button>
+        <button class="btn icon ghost" data-act="group-down" data-id="${g.id}" aria-label="Move down">↓</button>
+        <button class="btn icon" data-act="group-edit" data-id="${g.id}">Edit</button>
+      </div></div>`;
+  }).join('') : `<p class="empty">No groups yet. Tap “+ Add group”.</p>`;
+
+  // settings
+  const sf = $('#settings-form');
+  sf.elements.name.value = DB.settings.name;
+  $('[data-ml="tagline"]', sf).innerHTML = mlInputs('tagline', DB.settings.tagline);
+}
+
+function move(list, id, dir){
+  const i = list.findIndex(x=>x.id===id), j = i + dir;
+  if (i<0 || j<0 || j>=list.length) return;
+  [list[i], list[j]] = [list[j], list[i]]; save(); renderAdmin();
+}
+function moveItem(id, dir){
+  // move within the same group, swapping with the nearest sibling
+  const it = DB.items.find(i=>i.id===id);
+  const same = DB.items.filter(i=>i.groupId===it.groupId);
+  const k = same.indexOf(it), other = same[k+dir]; if (!other) return;
+  const a = DB.items.indexOf(it), b = DB.items.indexOf(other);
+  [DB.items[a], DB.items[b]] = [DB.items[b], DB.items[a]]; save(); renderAdmin();
+}
+
+function confirmBox(text, onYes){
+  openSheet(`<div class="form"><h3>Are you sure?</h3><p style="margin:0">${esc(text)}</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-no>Cancel</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-yes>Delete</button></div></div>`,
+    s => { $('[data-no]',s).onclick = closeSheet; $('[data-yes]',s).onclick = () => { closeSheet(); onYes(); }; });
+}
+
+/* ---- group editor ---- */
+function editGroup(id){
+  const g = id ? DB.groups.find(x=>x.id===id) : { id:uid(), name:{}, visible:true };
+  const count = id ? DB.items.filter(i=>i.groupId===id).length : 0;
+  openSheet(`<form class="form">
+      <h3>${id?'Edit group':'New group'}</h3>
+      <div class="field"><span class="fieldset-label">Name</span><div class="ml">${mlInputs('name', g.name, {required:true})}</div></div>
+      <label class="switch"><input type="checkbox" name="visible" ${g.visible?'checked':''}> Show on menu</label>
+      <div class="form-actions">
+        ${id?`<button type="button" class="btn danger" data-del style="margin-right:auto">Delete</button>`:''}
+        <button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary">Save</button>
+      </div></form>`, s => {
+    const f = $('form', s);
+    $('[data-cancel]', s).onclick = closeSheet;
+    $('[data-del]', s) && ($('[data-del]', s).onclick = () => confirmBox(
+      count ? `“${gName(g)}” and its ${count} item(s) will be deleted.` : `“${gName(g)}” will be deleted.`,
+      () => { DB.groups = DB.groups.filter(x=>x.id!==id); DB.items = DB.items.filter(i=>i.groupId!==id);
+              if (filterGroup===id) filterGroup='all'; save(); renderAdmin(); toast('Group deleted'); }));
+    f.onsubmit = e => {
+      e.preventDefault();
+      g.name = readMl(f,'name'); g.visible = f.elements.visible.checked;
+      if (!id) DB.groups.push(g);
+      save(); closeSheet(); renderAdmin(); toast('Group saved');
+    };
+  });
+}
+
+/* ---- item editor ---- */
+function optionRow(o={name:{},price:0}, n){
+  return `<div class="opt-row">
+    <div class="head"><span>Option ${n}</span><button type="button" class="btn icon ghost" data-rm-opt aria-label="Remove option">✕</button></div>
+    <div class="ml">${mlInputs('opt', o.name)}</div>
+    <div class="field"><label>Extra price (0 = included)</label><input class="inp" type="number" step="0.01" min="0" name="opt.price" value="${o.price||0}"></div>
+  </div>`;
+}
+
+function resizeImage(file, max=900){
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*r); c.height = Math.round(img.height*r);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', .82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(); };
+    img.src = url;
+  });
+}
+
+function editItem(id){
+  if (!DB.groups.length){ toast('Add a group first'); return; }
+  const it = id ? structuredClone(DB.items.find(x=>x.id===id))
+                : { id:uid(), groupId: filterGroup!=='all' ? filterGroup : DB.groups[0].id, name:{}, desc:{}, price:'', image:'', options:[], available:true };
+  openSheet(`<form class="form">
+      <h3>${id?'Edit item':'New item'}</h3>
+      <div class="field"><label for="f-group">Group</label>
+        <select class="inp" id="f-group" name="groupId">${DB.groups.map(g=>`<option value="${g.id}" ${g.id===it.groupId?'selected':''}>${esc(gName(g))}</option>`).join('')}</select></div>
+      <div class="field"><span class="fieldset-label">Name</span><div class="ml">${mlInputs('name', it.name, {required:true})}</div></div>
+      <div class="field"><span class="fieldset-label">Description</span><div class="ml">${mlInputs('desc', it.desc, {textarea:true})}</div></div>
+      <div class="two">
+        <div class="field"><label for="f-price">Price (€)</label><input class="inp" id="f-price" type="number" step="0.01" min="0" name="price" value="${it.price}" required></div>
+        <div class="field" style="align-self:end"><label class="switch"><input type="checkbox" name="available" ${it.available?'checked':''}> Available</label></div>
+      </div>
+      <div class="field"><span class="fieldset-label">Image</span>
+        <div class="img-box">
+          <img class="preview" alt="" ${it.image?`src="${it.image}"`:''}>
+          <div style="display:grid;gap:6px">
+            <label class="btn" style="text-align:center">Choose image<input type="file" accept="image/*" hidden data-file></label>
+            <button type="button" class="btn ghost danger" data-rm-img ${it.image?'':'hidden'}>Remove image</button>
+          </div>
+        </div></div>
+      <div class="field"><span class="fieldset-label">Options <span style="font-weight:400;color:var(--muted)">— sizes, extras, choices</span></span>
+        <div style="display:grid;gap:8px" data-opts>${it.options.map((o,i)=>optionRow(o,i+1)).join('')}</div>
+        <button type="button" class="btn" style="margin-top:8px" data-add-opt>+ Add option</button></div>
+      <p class="err hidden" data-err></p>
+      <div class="form-actions">
+        ${id?`<button type="button" class="btn danger" data-del style="margin-right:auto">Delete</button>`:''}
+        <button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary">Save</button>
+      </div></form>`, s => {
+    const f = $('form', s), opts = $('[data-opts]', s), prev = $('.preview', s), rmImg = $('[data-rm-img]', s);
+    const renumber = () => opts.querySelectorAll('.opt-row .head span').forEach((el,i)=>el.textContent=`Option ${i+1}`);
+    $('[data-cancel]', s).onclick = closeSheet;
+    $('[data-add-opt]', s).onclick = () => { opts.insertAdjacentHTML('beforeend', optionRow(undefined, opts.children.length+1)); };
+    opts.addEventListener('click', e => { if (e.target.closest('[data-rm-opt]')){ e.target.closest('.opt-row').remove(); renumber(); }});
+    $('[data-file]', s).onchange = async e => {
+      const file = e.target.files[0]; if (!file) return;
+      try { it.image = await resizeImage(file); prev.src = it.image; rmImg.hidden = false; }
+      catch { toast('That file could not be read as an image'); }
+    };
+    rmImg.onclick = () => { it.image=''; prev.removeAttribute('src'); rmImg.hidden = true; };
+    $('[data-del]', s) && ($('[data-del]', s).onclick = () => confirmBox(`“${it.name[LANGS[0].code]}” will be deleted.`,
+      () => { DB.items = DB.items.filter(x=>x.id!==id); save(); renderAdmin(); toast('Item deleted'); }));
+    f.onsubmit = e => {
+      e.preventDefault();
+      it.groupId = f.elements.groupId.value;
+      it.name = readMl(f,'name'); it.desc = readMl(f,'desc');
+      it.price = Math.round(parseFloat(f.elements.price.value)*100)/100;
+      it.available = f.elements.available.checked;
+      it.options = [...opts.querySelectorAll('.opt-row')].map(row => {
+        const name = {}; LANGS.forEach((l,i)=> name[l.code] = row.querySelectorAll('.ml input')[i].value.trim());
+        return { name, price: Math.round((parseFloat(row.querySelector('[name="opt.price"]').value)||0)*100)/100 };
+      }).filter(o => Object.values(o.name).some(Boolean));
+      const idx = DB.items.findIndex(x=>x.id===it.id);
+      const before = structuredClone(DB.items);
+      if (idx>=0) DB.items[idx] = it; else DB.items.push(it);
+      if (!save()){ DB.items = before; return; }
+      closeSheet(); renderAdmin(); toast('Item saved');
+    };
+  });
+}
+
+/* ---- admin events ---- */
+$('#view-admin').addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab){
+    document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b===tab));
+    ['items','groups','settings'].forEach(t => $('#tab-'+t).classList.toggle('hidden', t!==tab.dataset.tab));
+    return;
+  }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const id = b.dataset.id;
+  ({ 'item-up':()=>moveItem(id,-1), 'item-down':()=>moveItem(id,1), 'item-edit':()=>editItem(id),
+     'group-up':()=>move(DB.groups,id,-1), 'group-down':()=>move(DB.groups,id,1), 'group-edit':()=>editGroup(id) })[b.dataset.act]();
+});
+$('#add-item').onclick = () => editItem();
+$('#add-group').onclick = () => editGroup();
+$('#filter-group').onchange = e => { filterGroup = e.target.value; renderAdmin(); };
+$('#settings-form').onsubmit = e => {
+  e.preventDefault(); const f = e.target;
+  DB.settings.name = f.elements.name.value.trim(); DB.settings.tagline = readMl(f,'tagline');
+  save(); toast('Saved');
+};
+$('#reset-demo').onclick = () => confirmBox('All changes will be replaced by the sample menu.',
+  () => { DB = sampleData(); save(); filterGroup='all'; renderAdmin(); toast('Demo data restored'); });
+
+/* =========================================================
+   ROUTING (#menu / #admin)
+   ========================================================= */
+function route(){
+  closeSheet();
+  const admin = location.hash === '#admin';
+  $('#view-menu').classList.toggle('hidden', admin);
+  $('#view-admin').classList.toggle('hidden', !admin);
+  if (admin){ document.title = 'Menu admin'; renderAdmin(); } else renderMenu();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+load(); route();
+</script>
+</body>
+</html>

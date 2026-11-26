@@ -1,0 +1,19 @@
+services:
+  gyros-menu:
+    build: .
+    image: gyros-menu:latest
+    restart: unless-stopped
+    init: true                      # reaps zombie processes; signals still reach node
+    stop_grace_period: 15s          # the app force-exits after 10 s anyway
+    env_file: .env
+    environment:
+      # Fixed inside the container, whatever .env says (it may hold development values).
+      NODE_ENV: production
+      DATA_DIR: /data
+      HOST: 0.0.0.0
+      PORT: "8080"
+    volumes:
+      # menu.db and uploads/ live here. Must be writable by uid 1000 (the "node" user).
+      - ${DATA_PATH:-./data}:/data
+    ports:
+      - "127.0.0.1:8085:8080"       # only nginx on this host can reach it
